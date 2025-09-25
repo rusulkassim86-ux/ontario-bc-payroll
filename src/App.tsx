@@ -11,7 +11,7 @@ import Company from "./pages/Company";
 import Employees from "./pages/Employees";
 import UserManagement from "./pages/UserManagement";
 import Timesheets from "./pages/Timesheets";
-import IndividualTimecard from "./pages/IndividualTimecard";
+import IndividualTimecardMinimal from "./pages/IndividualTimecardMinimal";
 import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
 import SecurityCenter from "./pages/SecurityCenter";
@@ -42,7 +42,7 @@ const App = () => (
                 <Route path="/employees" element={<Employees />} />
                 <Route path="/user-management" element={<UserManagement />} />
                 <Route path="/timesheets" element={<Timesheets />} />
-                <Route path="/timecard/:employeeId" element={<IndividualTimecard />} />
+                <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
                 <Route path="/payroll" element={<Payroll />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/security-center" element={<SecurityCenter />} />
