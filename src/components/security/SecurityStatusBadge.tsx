@@ -26,14 +26,14 @@ export function SecurityStatusBadge() {
     alertsCount: 0
   });
 
+  useEffect(() => {
+    checkSecurityStatus();
+  }, []);
+
   // Only show for admin users
   if (!profile || !['org_admin', 'payroll_admin'].includes(profile.role)) {
     return null;
   }
-
-  useEffect(() => {
-    checkSecurityStatus();
-  }, []);
 
   const checkSecurityStatus = async () => {
     try {
