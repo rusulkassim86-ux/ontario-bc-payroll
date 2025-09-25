@@ -322,45 +322,7 @@ export default function Timesheets() {
                           <div>
                             <p className="font-medium">{timesheet.employee}</p>
                             <p className="text-sm text-muted-foreground">{timesheet.employeeId}</p>
-                            {/* Debug caption showing detected ID */}
-                            <p className="text-xs text-muted-foreground/70 italic">
-                              Debug: {detectedField} = {employeeId || 'NOT_FOUND'}
-                            </p>
-                            {/* Full row object as JSON */}
-                            <div className="mt-2 p-2 bg-slate-100 rounded text-xs font-mono max-w-xs overflow-auto">
-                              <p className="font-semibold text-blue-600 mb-1">Full Row Object:</p>
-                              <pre className="whitespace-pre-wrap text-[10px]">
-                                {JSON.stringify(timesheet, null, 2)}
-                              </pre>
-                              <p className="font-semibold text-green-600 mt-1">
-                                Employee ID Field: <span className="bg-yellow-200 px-1 rounded">{detectedField}</span>
-                              </p>
-                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {(() => {
-                            const employeeId = getEmployeeId(timesheet);
-                            return employeeId ? (
-                              <Button 
-                                size="sm" 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/timecard/${employeeId}`);
-                                }}
-                              >
-                                Open Timecard
-                              </Button>
-                            ) : (
-                              <Button 
-                                size="sm" 
-                                disabled
-                                variant="outline"
-                              >
-                                Missing ID
-                              </Button>
-                            );
-                          })()}
                         </TableCell>
                         <TableCell>{timesheet.week}</TableCell>
                         <TableCell className="font-mono">{timesheet.regularHours}</TableCell>
@@ -373,47 +335,70 @@ export default function Timesheets() {
                             {timesheet.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    console.log('Review button clicked - Full row object:', timesheet);
-                                    
-                                    // Try to find employee ID in order of preference
-                                    const employeeId = (timesheet as any).employeeId || (timesheet as any).associateId || (timesheet as any).empNo || (timesheet as any).id;
-                                    
-                                    if (employeeId) {
-                                      navigate(`/timecard/${employeeId}`);
-                                    } else {
-                                      toast({
-                                        variant: "destructive",
-                                        title: "Error",
-                                        description: "Missing employee id in row data",
-                                      });
-                                    }
-                                  }}
-                                >
-                                  Review
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Open Individual Timecard</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Button 
-                              size="sm" 
-                              className="bg-success text-success-foreground"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Approve
-                            </Button>
-                          </div>
-                        </TableCell>
+                         <TableCell>
+                           {(() => {
+                             const employeeId = getEmployeeId(timesheet);
+                             return employeeId ? (
+                               <Button 
+                                 size="sm" 
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   navigate(`/timecard/${employeeId}`);
+                                 }}
+                               >
+                                 Open Timecard
+                               </Button>
+                             ) : (
+                               <Button 
+                                 size="sm" 
+                                 disabled
+                                 variant="outline"
+                               >
+                                 Missing ID
+                               </Button>
+                             );
+                           })()}
+                         </TableCell>
+                         <TableCell>
+                           <div className="flex gap-2">
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <Button 
+                                   size="sm" 
+                                   variant="outline"
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     
+                                     // Try to find employee ID in order of preference
+                                     const employeeId = (timesheet as any).employeeId || (timesheet as any).associateId || (timesheet as any).empNo || (timesheet as any).id;
+                                     
+                                     if (employeeId) {
+                                       navigate(`/timecard/${employeeId}`);
+                                     } else {
+                                       toast({
+                                         variant: "destructive",
+                                         title: "Error",
+                                         description: "Missing employee id in row data",
+                                       });
+                                     }
+                                   }}
+                                 >
+                                   Review
+                                 </Button>
+                               </TooltipTrigger>
+                               <TooltipContent>
+                                 <p>Open Individual Timecard</p>
+                               </TooltipContent>
+                             </Tooltip>
+                             <Button 
+                               size="sm" 
+                               className="bg-success text-success-foreground"
+                               onClick={(e) => e.stopPropagation()}
+                             >
+                               Approve
+                             </Button>
+                           </div>
+                         </TableCell>
                       </TableRow>
                     )})}
                   </TableBody>
