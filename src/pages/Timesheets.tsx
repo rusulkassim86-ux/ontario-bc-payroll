@@ -69,7 +69,7 @@ export default function Timesheets() {
   const navigate = useNavigate();
 
   const handleEmployeeClick = (employeeId: string) => {
-    navigate(`/individual-timecard?employee=${employeeId}`);
+    navigate(`/timecard/${employeeId}`);
   };
 
   return (

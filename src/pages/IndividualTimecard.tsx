@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Download, Save, Check, ArrowLeft } from "lucide-react";
-import { format, addDays, startOfWeek, isSameWeek } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, Download, Save, Check, ArrowLeft, Shield } from "lucide-react";
+import { format, addDays, startOfWeek, isSameWeek, parseISO } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TimecardEntry {
   id: string;
@@ -36,51 +39,121 @@ interface Employee {
 }
 
 export default function IndividualTimecard() {
-  const [searchParams] = useSearchParams();
+  const { employeeId } = useParams<{ employeeId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
   const [selectedPeriod, setSelectedPeriod] = useState("current-week");
-  const [startDate, setStartDate] = useState(() => startOfWeek(new Date()));
-  const [endDate, setEndDate] = useState(() => addDays(startOfWeek(new Date()), 6));
+  const [startDate, setStartDate] = useState(() => {
+    const startParam = searchParams.get("start");
+    return startParam ? parseISO(startParam) : startOfWeek(new Date());
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const endParam = searchParams.get("end");
+    return endParam ? parseISO(endParam) : addDays(startOfWeek(new Date()), 6);
+  });
   const [activeTab, setActiveTab] = useState("timecard");
+  const [loading, setLoading] = useState(true);
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState(false);
   
-  const employeeId = searchParams.get("employee");
-  
-  // Mock employee data - in real app this would come from API based on employeeId
-  const getEmployeeData = (id: string | null): Employee => {
-    const employees = {
-      "EMP001": {
-        id: "1",
-        name: "John Smith",
-        employeeId: "EMP001",
-        positionId: "POS123",
-        taxId: "XXX-XX-1575",
-        status: "Active" as const,
-        rehireDate: "2023-01-15"
-      },
-      "EMP002": {
-        id: "2",
-        name: "Sarah Chen",
-        employeeId: "EMP002",
-        positionId: "POS124",
-        taxId: "XXX-XX-2890",
-        status: "Active" as const,
-        rehireDate: "2022-06-10"
-      },
-      "EMP003": {
-        id: "3",
-        name: "Mike Johnson",
-        employeeId: "EMP003",
-        positionId: "POS125",
-        taxId: "XXX-XX-3456",
-        status: "Active" as const,
-        rehireDate: "2023-03-22"
+  // Check user permissions on component mount
+  useEffect(() => {
+    const checkUserPermissions = async () => {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+          .single();
+        
+        const role = profile?.role;
+        setUserRole(role);
+        
+        const allowedRoles = ['org_admin', 'payroll_admin', 'manager'];
+        setHasPermission(allowedRoles.includes(role));
+        
+        if (!allowedRoles.includes(role)) {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to view timecards.",
+            variant: "destructive",
+          });
+          navigate('/timesheets');
+          return;
+        }
+        
+        if (employeeId) {
+          await loadEmployeeData(employeeId);
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error);
+        toast({
+          title: "Error",
+          description: "Failed to verify permissions.",
+          variant: "destructive",
+        });
+        navigate('/timesheets');
+      } finally {
+        setLoading(false);
       }
     };
     
-    return employees[id as keyof typeof employees] || employees["EMP001"];
+    checkUserPermissions();
+  }, [employeeId, navigate, toast]);
+
+  // Load employee data
+  const loadEmployeeData = async (empId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('employee_number', empId)
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setEmployee({
+          id: data.id,
+          name: `${data.first_name} ${data.last_name}`,
+          employeeId: data.employee_number,
+          positionId: data.classification || 'N/A',
+          taxId: data.sin_encrypted ? 'XXX-XX-****' : 'Not provided',
+          status: data.status === 'active' ? 'Active' : 'Inactive',
+          rehireDate: data.hire_date
+        });
+      }
+    } catch (error) {
+      console.error('Error loading employee:', error);
+      setEmployee(null);
+    }
   };
-  
-  const employee = getEmployeeData(employeeId);
+
+  // Update URL when date range changes
+  const updateDateRange = (start: Date, end: Date) => {
+    setStartDate(start);
+    setEndDate(end);
+    setSearchParams({
+      start: format(start, 'yyyy-MM-dd'),
+      end: format(end, 'yyyy-MM-dd')
+    });
+  };
+
+  // Mock employee data fallback
+  const getEmployeeFallback = (): Employee => ({
+    id: "1",
+    name: "John Smith",
+    employeeId: employeeId || "EMP001",
+    positionId: "POS123",
+    taxId: "XXX-XX-1575",
+    status: "Active",
+    rehireDate: "2023-01-15"
+  });
 
   // Mock timecard entries
   const [entries, setEntries] = useState<TimecardEntry[]>([
@@ -167,7 +240,91 @@ export default function IndividualTimecard() {
   };
 
   const weekDays = getWeekDays();
+  const handleApproveTimecard = async () => {
+    try {
+      await supabase.from('audit_logs').insert({
+        action: 'APPROVE_TIMECARD',
+        entity_type: 'timesheet',
+        entity_id: employee?.id || '',
+        metadata: {
+          employee_id: employeeId,
+          period_start: format(startDate, 'yyyy-MM-dd'),
+          period_end: format(endDate, 'yyyy-MM-dd'),
+          approved_by_role: userRole
+        }
+      });
+      
+      toast({
+        title: "Timecard Approved",
+        description: `Timecard for ${employee?.name || employeeId} has been approved.`,
+      });
+    } catch (error) {
+      console.error('Error approving timecard:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve timecard.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const totalsByPayCode = getTotalsByPayCode();
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader title="Individual Timecard" />
+        <div className="p-6 space-y-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-48" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-6 w-32" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Not found state
+  if (!employee && !loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader title="Employee Not Found" />
+        <div className="p-6">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="space-y-4">
+                <Shield className="h-12 w-12 mx-auto text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-semibold">Employee Not Found</h3>
+                  <p className="text-muted-foreground">
+                    The employee with ID "{employeeId}" could not be found.
+                  </p>
+                </div>
+                <Button onClick={() => navigate('/timesheets')}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Timesheets
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const displayEmployee = employee || getEmployeeFallback();
 
   return (
     <div className="min-h-screen bg-background">
@@ -191,7 +348,7 @@ export default function IndividualTimecard() {
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button size="sm" className="bg-success text-success-foreground">
+            <Button size="sm" className="bg-success text-success-foreground" onClick={handleApproveTimecard}>
               <Check className="h-4 w-4 mr-2" />
               Approve Timecard
             </Button>
@@ -209,23 +366,23 @@ export default function IndividualTimecard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Employee Name</Label>
-                <p className="font-semibold">{employee.name}</p>
+                <p className="font-semibold">{displayEmployee.name}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Employee ID / Position ID</Label>
-                <p className="font-semibold">{employee.employeeId} / {employee.positionId}</p>
+                <p className="font-semibold">{displayEmployee.employeeId} / {displayEmployee.positionId}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Tax ID</Label>
-                <p className="font-semibold font-mono">{employee.taxId}</p>
+                <p className="font-semibold font-mono">{displayEmployee.taxId}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Status</Label>
                 <div className="flex items-center gap-2">
-                  <Badge variant={employee.status === "Active" ? "default" : "secondary"}>
-                    {employee.status}
+                  <Badge variant={displayEmployee.status === "Active" ? "default" : "secondary"}>
+                    {displayEmployee.status}
                   </Badge>
-                  <span className="text-sm">Rehire: {employee.rehireDate}</span>
+                  <span className="text-sm">Rehire: {displayEmployee.rehireDate}</span>
                 </div>
               </div>
             </div>
@@ -255,7 +412,10 @@ export default function IndividualTimecard() {
                   id="start-date"
                   type="date"
                   value={format(startDate, 'yyyy-MM-dd')}
-                  onChange={(e) => setStartDate(new Date(e.target.value))}
+                  onChange={(e) => {
+                    const newStart = new Date(e.target.value);
+                    updateDateRange(newStart, endDate);
+                  }}
                 />
               </div>
               <div>
@@ -264,7 +424,10 @@ export default function IndividualTimecard() {
                   id="end-date"
                   type="date"
                   value={format(endDate, 'yyyy-MM-dd')}
-                  onChange={(e) => setEndDate(new Date(e.target.value))}
+                  onChange={(e) => {
+                    const newEnd = new Date(e.target.value);
+                    updateDateRange(startDate, newEnd);
+                  }}
                 />
               </div>
               <Button>

@@ -37,7 +37,7 @@ const App = () => (
                 <Route path="/employees" element={<Employees />} />
                 <Route path="/user-management" element={<UserManagement />} />
                 <Route path="/timesheets" element={<Timesheets />} />
-                <Route path="/individual-timecard" element={<IndividualTimecard />} />
+                <Route path="/timecard/:employeeId" element={<IndividualTimecard />} />
                 <Route path="/payroll" element={<Payroll />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/security-center" element={<SecurityCenter />} />
