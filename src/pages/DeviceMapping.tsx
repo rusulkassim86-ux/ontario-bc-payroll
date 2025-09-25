@@ -69,16 +69,7 @@ export default function DeviceMapping() {
 
   const loadData = async () => {
     try {
-      // Load devices
-      const { data: devicesData, error: devicesError } = await supabase
-        .from('devices')
-        .select('*')
-        .order('location', { ascending: true });
-
-      if (devicesError) throw devicesError;
-      setDevices(devicesData || []);
-
-      // Load employees
+      // Load employees from existing table
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
         .select('id, first_name, last_name, employee_number')
@@ -88,24 +79,16 @@ export default function DeviceMapping() {
       if (employeesError) throw employeesError;
       setEmployees(employeesData || []);
 
-      // Load mappings with related data
-      const { data: mappingsData, error: mappingsError } = await supabase
-        .from('device_employees')
-        .select(`
-          *,
-          devices (id, serial_number, model, location, status, last_heartbeat_at),
-          employees (id, first_name, last_name, employee_number)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (mappingsError) throw mappingsError;
-      setMappings(mappingsData || []);
+      // TODO: Load devices and mappings after migration is approved
+      // Temporarily setting empty arrays to prevent TypeScript errors
+      setDevices([]);
+      setMappings([]);
 
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "Failed to load device mapping data.",
+        description: "Failed to load device mapping data. Please approve the database migration first.",
         variant: "destructive",
       });
     } finally {
@@ -115,34 +98,11 @@ export default function DeviceMapping() {
 
   const handleAddDevice = async () => {
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
-
-      const { error } = await supabase
-        .from('devices')
-        .insert({
-          ...newDevice,
-          company_id: profile?.company_id
-        });
-
-      if (error) throw error;
-
       toast({
-        title: "Success",
-        description: "Device added successfully.",
+        title: "Migration Required",
+        description: "Please approve the database migration first before adding devices.",
+        variant: "destructive",
       });
-
-      setNewDevice({
-        serial_number: "",
-        model: "",
-        location: "",
-        status: "active"
-      });
-      setShowDeviceDialog(false);
-      loadData();
     } catch (error) {
       console.error('Error adding device:', error);
       toast({
@@ -155,25 +115,11 @@ export default function DeviceMapping() {
 
   const handleAddMapping = async () => {
     try {
-      const { error } = await supabase
-        .from('device_employees')
-        .insert(newMapping);
-
-      if (error) throw error;
-
       toast({
-        title: "Success",
-        description: "Employee mapping added successfully.",
+        title: "Migration Required",
+        description: "Please approve the database migration first before adding mappings.",
+        variant: "destructive",
       });
-
-      setNewMapping({
-        device_id: "",
-        employee_id: "",
-        badge_id: "",
-        active: true
-      });
-      setShowAddDialog(false);
-      loadData();
     } catch (error) {
       console.error('Error adding mapping:', error);
       toast({
@@ -186,19 +132,11 @@ export default function DeviceMapping() {
 
   const toggleMappingActive = async (mappingId: string, active: boolean) => {
     try {
-      const { error } = await supabase
-        .from('device_employees')
-        .update({ active })
-        .eq('id', mappingId);
-
-      if (error) throw error;
-
       toast({
-        title: "Success",
-        description: `Mapping ${active ? 'activated' : 'deactivated'} successfully.`,
+        title: "Migration Required",
+        description: "Please approve the database migration first.",
+        variant: "destructive",
       });
-
-      loadData();
     } catch (error) {
       console.error('Error updating mapping:', error);
       toast({
@@ -384,48 +322,56 @@ export default function DeviceMapping() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mappings.map((mapping) => {
-                      const deviceStatus = mapping.devices ? getDeviceStatus(mapping.devices) : { status: 'unknown', color: 'secondary' };
-                      
-                      return (
-                        <TableRow key={mapping.id}>
-                          <TableCell>
-                            {mapping.employees ? 
-                              `${mapping.employees.first_name} ${mapping.employees.last_name}` 
-                              : 'Unknown Employee'
-                            }
-                          </TableCell>
-                          <TableCell className="font-mono">
-                            {mapping.employees?.employee_number}
-                          </TableCell>
-                          <TableCell className="font-mono font-semibold">
-                            {mapping.badge_id}
-                          </TableCell>
-                          <TableCell>
-                            {mapping.devices ? 
-                              `${mapping.devices.serial_number} (${mapping.devices.location})` 
-                              : 'Unknown Device'
-                            }
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={deviceStatus.color as any}>
-                              {deviceStatus.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={mapping.active}
-                              onCheckedChange={(checked) => toggleMappingActive(mapping.id, checked)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm">
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {mappings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          Please approve the database migration to view employee mappings
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      mappings.map((mapping) => {
+                        const deviceStatus = mapping.device ? getDeviceStatus(mapping.device) : { status: 'unknown', color: 'secondary' };
+                        
+                        return (
+                          <TableRow key={mapping.id}>
+                            <TableCell>
+                              {mapping.employee ? 
+                                `${mapping.employee.first_name} ${mapping.employee.last_name}` 
+                                : 'Unknown Employee'
+                              }
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {mapping.employee?.employee_number}
+                            </TableCell>
+                            <TableCell className="font-mono font-semibold">
+                              {mapping.badge_id}
+                            </TableCell>
+                            <TableCell>
+                              {mapping.device ? 
+                                `${mapping.device.serial_number} (${mapping.device.location})` 
+                                : 'Unknown Device'
+                              }
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={deviceStatus.color as any}>
+                                {deviceStatus.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Switch
+                                checked={mapping.active}
+                                onCheckedChange={(checked) => toggleMappingActive(mapping.id, checked)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="sm">
+                                <Settings className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -453,39 +399,47 @@ export default function DeviceMapping() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {devices.map((device) => {
-                      const deviceStatus = getDeviceStatus(device);
-                      const mappedCount = mappings.filter(m => m.device_id === device.id && m.active).length;
-                      
-                      return (
-                        <TableRow key={device.id}>
-                          <TableCell className="font-mono font-semibold">
-                            {device.serial_number}
-                          </TableCell>
-                          <TableCell>{device.model}</TableCell>
-                          <TableCell>{device.location}</TableCell>
-                          <TableCell>
-                            <Badge variant={deviceStatus.color as any}>
-                              {deviceStatus.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {device.last_heartbeat_at ? 
-                              new Date(device.last_heartbeat_at).toLocaleString()
-                              : 'Never'
-                            }
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">{mappedCount} employees</Badge>
-                              {mappedCount === 0 && (
-                                <AlertTriangle className="w-4 h-4 text-warning" />
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {devices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          Please approve the database migration to view devices
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      devices.map((device) => {
+                        const deviceStatus = getDeviceStatus(device);
+                        const mappedCount = mappings.filter(m => m.device_id === device.id && m.active).length;
+                        
+                        return (
+                          <TableRow key={device.id}>
+                            <TableCell className="font-mono font-semibold">
+                              {device.serial_number}
+                            </TableCell>
+                            <TableCell>{device.model}</TableCell>
+                            <TableCell>{device.location}</TableCell>
+                            <TableCell>
+                              <Badge variant={deviceStatus.color as any}>
+                                {deviceStatus.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {device.last_heartbeat_at ? 
+                                new Date(device.last_heartbeat_at).toLocaleString()
+                                : 'Never'
+                              }
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">{mappedCount} employees</Badge>
+                                {mappedCount === 0 && (
+                                  <AlertTriangle className="w-4 h-4 text-warning" />
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
