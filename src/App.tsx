@@ -20,6 +20,7 @@ import DeviceMapping from "./pages/DeviceMapping";
 import PunchFeed from "./pages/PunchFeed";
 import PunchConfig from "./pages/PunchConfig";
 import Devices from "./pages/Devices";
+import DevRoutes from "./pages/DevRoutes";
 import NotFound from "./pages/NotFound";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 
@@ -50,6 +51,7 @@ const App = () => (
                 <Route path="/punch-feed" element={<PunchFeed />} />
                 <Route path="/devices" element={<Devices />} />
                 <Route path="/punch-config" element={<PunchConfig />} />
+                <Route path="/dev/routes" element={<DevRoutes />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AppLayout>
