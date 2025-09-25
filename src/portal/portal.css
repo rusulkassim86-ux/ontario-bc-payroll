@@ -1,0 +1,112 @@
+/* Best Theratronics Portal Branding */
+:root {
+  /* Brand Colors */
+  --bt-primary: 210 80% 50%; /* Subtle blue */
+  --bt-primary-foreground: 0 0% 98%;
+  --bt-secondary: 180 25% 55%; /* Teal accent */
+  --bt-secondary-foreground: 0 0% 10%;
+  --bt-muted: 210 40% 96%; /* Light gray backgrounds */
+  --bt-muted-foreground: 215 16% 47%;
+  --bt-accent: 210 40% 98%;
+  --bt-accent-foreground: 222 84% 5%;
+  
+  /* Portal-specific overrides */
+  --primary: var(--bt-primary);
+  --primary-foreground: var(--bt-primary-foreground);
+  --secondary: var(--bt-secondary);
+  --secondary-foreground: var(--bt-secondary-foreground);
+  --muted: var(--bt-muted);
+  --muted-foreground: var(--bt-muted-foreground);
+  --accent: var(--bt-accent);
+  --accent-foreground: var(--bt-accent-foreground);
+  
+  /* Dark mode overrides */
+  --background: 222 84% 5%;
+  --foreground: 210 40% 98%;
+  --card: 222 84% 5%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 84% 5%;
+  --popover-foreground: 210 40% 98%;
+  --border: 217 32% 17%;
+  --input: 217 32% 17%;
+  --ring: var(--bt-primary);
+  
+  /* Best Theratronics gradients */
+  --bt-gradient-primary: linear-gradient(135deg, hsl(var(--bt-primary)), hsl(var(--bt-secondary)));
+  --bt-gradient-subtle: linear-gradient(180deg, hsl(var(--bt-muted)), hsl(var(--bt-accent)));
+}
+
+.dark {
+  --bt-primary: 210 70% 60%;
+  --bt-secondary: 180 25% 65%;
+  --bt-muted: 217 32% 15%;
+  --bt-accent: 217 32% 10%;
+}
+
+/* Portal-specific styles */
+.portal-brand {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 600;
+  background: var(--bt-gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.portal-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.portal-nav-active {
+  background: hsl(var(--bt-primary) / 0.1);
+  color: hsl(var(--bt-primary));
+  border-right: 2px solid hsl(var(--bt-primary));
+}
+
+/* PWA styles */
+.pwa-install-prompt {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  z-index: 50;
+}
+
+/* Accessibility enhancements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .portal-card {
+    border-width: 2px;
+  }
+  
+  .portal-nav-active {
+    border-right-width: 4px;
+  }
+}
+
+/* Print styles for paystubs */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .portal-card {
+    border: 1px solid #000;
+    box-shadow: none;
+  }
+}
