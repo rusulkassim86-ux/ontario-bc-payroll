@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Search, Settings, Info } from 'lucide-react';
+import { Plus, Search, Settings, Info, Upload } from 'lucide-react';
 import { usePayCodes, PayCode } from '@/hooks/usePayCodes';
 import { PayCodeForm } from './PayCodeForm';
+import { PayCodeImporter } from './PayCodeImporter';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ export function PayCodesSettings() {
   const { payCodes, loading, deletePayCode } = usePayCodes();
   const [selectedPayCode, setSelectedPayCode] = useState<PayCode | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
@@ -73,6 +75,10 @@ export function PayCodesSettings() {
     }
   };
 
+  if (isImporterOpen) {
+    return <PayCodeImporter />;
+  }
+
   if (loading) {
     return <div>Loading pay codes...</div>;
   }
@@ -86,35 +92,42 @@ export function PayCodesSettings() {
             Configure pay codes for earnings, overtime, PTO, and deductions
           </p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Pay Code
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedPayCode ? 'Edit Pay Code' : 'Create Pay Code'}
-              </DialogTitle>
-              <DialogDescription>
-                Configure a pay code for payroll calculations
-              </DialogDescription>
-            </DialogHeader>
-            <PayCodeForm
-              payCode={selectedPayCode}
-              onSuccess={() => {
-                setIsFormOpen(false);
-                setSelectedPayCode(null);
-              }}
-              onCancel={() => {
-                setIsFormOpen(false);
-                setSelectedPayCode(null);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Pay Code
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedPayCode ? 'Edit Pay Code' : 'Create Pay Code'}
+                </DialogTitle>
+                <DialogDescription>
+                  Configure a pay code for payroll calculations
+                </DialogDescription>
+              </DialogHeader>
+              <PayCodeForm
+                payCode={selectedPayCode}
+                onSuccess={() => {
+                  setIsFormOpen(false);
+                  setSelectedPayCode(null);
+                }}
+                onCancel={() => {
+                  setIsFormOpen(false);
+                  setSelectedPayCode(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="outline" onClick={() => setIsImporterOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import Pay Codes
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

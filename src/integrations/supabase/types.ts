@@ -828,6 +828,66 @@ export type Database = {
           },
         ]
       }
+      import_logs: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          error_rows: number | null
+          errors: Json | null
+          file_name: string
+          file_path: string
+          id: string
+          import_type: string
+          imported_by: string | null
+          mapping: Json | null
+          preview_data: Json | null
+          processed_rows: number | null
+          started_at: string | null
+          status: string
+          total_rows: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number | null
+          errors?: Json | null
+          file_name: string
+          file_path: string
+          id?: string
+          import_type: string
+          imported_by?: string | null
+          mapping?: Json | null
+          preview_data?: Json | null
+          processed_rows?: number | null
+          started_at?: string | null
+          status?: string
+          total_rows?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_rows?: number | null
+          errors?: Json | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          import_type?: string
+          imported_by?: string | null
+          mapping?: Json | null
+          preview_data?: Json | null
+          processed_rows?: number | null
+          started_at?: string | null
+          status?: string
+          total_rows?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pay_calendars: {
         Row: {
           company_id: string
