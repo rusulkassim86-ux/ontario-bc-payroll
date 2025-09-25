@@ -247,6 +247,7 @@ export default function Timesheets() {
                       <TableHead>Overtime Hours</TableHead>
                       <TableHead>Worksite</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Open Timecard</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -264,6 +265,30 @@ export default function Timesheets() {
                             <p className="font-medium">{timesheet.employee}</p>
                             <p className="text-sm text-muted-foreground">{timesheet.employeeId}</p>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const employeeId = getEmployeeId(timesheet);
+                            return employeeId ? (
+                              <Button 
+                                size="sm" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/timecard/${employeeId}`);
+                                }}
+                              >
+                                Open Timecard
+                              </Button>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                disabled
+                                variant="outline"
+                              >
+                                Missing ID
+                              </Button>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>{timesheet.week}</TableCell>
                         <TableCell className="font-mono">{timesheet.regularHours}</TableCell>
