@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, ChevronLeft, ChevronRight, Info, FileText } from "lucide-react";
+import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
+import { PayCode } from '@/hooks/usePayCodes';
 import * as XLSX from 'xlsx';
 import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, isMonday, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +55,7 @@ export default function IndividualTimecardMinimal() {
   const { payPeriod, loading: payPeriodLoading } = useEmployeePayPeriod(employeeId || '');
   const [timesheets, setTimesheets] = useState<any[]>([]);
   const [autoExpanded, setAutoExpanded] = useState(false);
+  const [payCodeMap, setPayCodeMap] = useState<Record<string, PayCode>>({});
 
   // Calculate bi-weekly period based on company pay period settings
   const calculateBiWeeklyPeriod = (providedStart?: string, providedEnd?: string) => {
@@ -790,19 +793,18 @@ export default function IndividualTimecardMinimal() {
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  <Select
-                                    value={entry.payCode}
-                                    onValueChange={(value) => updateEntry(entry.id, 'payCode', value)}
-                                  >
-                                    <SelectTrigger className="w-24">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-background border shadow-lg z-50">
-                                      {payCodeOptions.map(code => (
-                                        <SelectItem key={code} value={code}>{code}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <div className="w-40">
+                                    <PayCodeSelector
+                                      employeeId={employeeId || ''}
+                                      value={entry.payCode}
+                                      onChange={(payCode) => {
+                                        if (payCode) {
+                                          setPayCodeMap(prev => ({ ...prev, [entry.id]: payCode }));
+                                          updateEntry(entry.id, 'payCode', payCode.code);
+                                        }
+                                      }}
+                                    />
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-right font-mono">
                                   {entry.hours.toFixed(2)}

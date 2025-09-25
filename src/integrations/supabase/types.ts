@@ -498,6 +498,47 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_allowed_paycodes: {
+        Row: {
+          active: boolean
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          id: string
+          pay_code_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id: string
+          id?: string
+          pay_code_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          id?: string
+          pay_code_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_allowed_paycodes_pay_code_id_fkey"
+            columns: ["pay_code_id"]
+            isOneToOne: false
+            referencedRelation: "pay_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           address: Json
@@ -698,6 +739,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pay_codes: {
+        Row: {
+          active: boolean
+          category: string
+          code: string
+          company_id: string
+          created_at: string
+          default_hourly_rate_source: string | null
+          description: string | null
+          effective_from: string
+          effective_to: string | null
+          gl_earnings_code: string | null
+          id: string
+          multiplier: number | null
+          name: string
+          province: string | null
+          rate_type: string
+          requires_amount: boolean
+          requires_hours: boolean
+          taxable_flags: Json
+          union_code: string | null
+          updated_at: string
+          worksite_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          code: string
+          company_id: string
+          created_at?: string
+          default_hourly_rate_source?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          gl_earnings_code?: string | null
+          id?: string
+          multiplier?: number | null
+          name: string
+          province?: string | null
+          rate_type?: string
+          requires_amount?: boolean
+          requires_hours?: boolean
+          taxable_flags?: Json
+          union_code?: string | null
+          updated_at?: string
+          worksite_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          code?: string
+          company_id?: string
+          created_at?: string
+          default_hourly_rate_source?: string | null
+          description?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          gl_earnings_code?: string | null
+          id?: string
+          multiplier?: number | null
+          name?: string
+          province?: string | null
+          rate_type?: string
+          requires_amount?: boolean
+          requires_hours?: boolean
+          taxable_flags?: Json
+          union_code?: string | null
+          updated_at?: string
+          worksite_id?: string | null
+        }
+        Relationships: []
       }
       pay_run_lines: {
         Row: {

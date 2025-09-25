@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PayCodesSettings } from '@/components/payroll/PayCodesSettings';
 import { 
   Building2, 
   MapPin, 
@@ -77,10 +78,11 @@ export default function Company() {
 
         {/* Company Setup Tabs */}
         <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">General Info</TabsTrigger>
             <TabsTrigger value="worksites">Worksites</TabsTrigger>
             <TabsTrigger value="payroll">Payroll Settings</TabsTrigger>
+            <TabsTrigger value="pay-codes">Pay Codes</TabsTrigger>
             <TabsTrigger value="compliance">Compliance</TabsTrigger>
           </TabsList>
           
@@ -251,6 +253,10 @@ export default function Company() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="pay-codes" className="space-y-6">
+            <PayCodesSettings />
           </TabsContent>
           
           <TabsContent value="compliance">
