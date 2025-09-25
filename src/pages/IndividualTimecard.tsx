@@ -11,10 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Download, Save, Check, ArrowLeft, Shield } from "lucide-react";
-import { format, addDays, startOfWeek, isSameWeek, parseISO } from "date-fns";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon } from "lucide-react";
+import { format, addDays, startOfWeek, isSameWeek, parseISO, subWeeks } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface TimecardEntry {
   id: string;
@@ -47,12 +50,14 @@ export default function IndividualTimecard() {
   const [selectedPeriod, setSelectedPeriod] = useState("current-week");
   const [startDate, setStartDate] = useState(() => {
     const startParam = searchParams.get("start");
-    return startParam ? parseISO(startParam) : startOfWeek(new Date());
+    return startParam ? parseISO(startParam) : startOfWeek(new Date(), { weekStartsOn: 1 });
   });
   const [endDate, setEndDate] = useState(() => {
     const endParam = searchParams.get("end");
-    return endParam ? parseISO(endParam) : addDays(startOfWeek(new Date()), 6);
+    return endParam ? parseISO(endParam) : addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 6);
   });
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
   const [activeTab, setActiveTab] = useState("timecard");
   const [loading, setLoading] = useState(true);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -123,9 +128,9 @@ export default function IndividualTimecard() {
           name: `${data.first_name} ${data.last_name}`,
           employeeId: data.employee_number,
           positionId: data.classification || 'N/A',
-          taxId: data.sin_encrypted ? 'XXX-XX-****' : 'Not provided',
+          taxId: data.sin_encrypted ? `XXX XXX ${data.employee_number.slice(-3)}` : 'XXX XXX ***',
           status: data.status === 'active' ? 'Active' : 'Inactive',
-          rehireDate: data.hire_date
+          rehireDate: format(new Date(data.hire_date), 'MMM dd, yyyy')
         });
       }
     } catch (error) {
@@ -144,15 +149,40 @@ export default function IndividualTimecard() {
     });
   };
 
+  // Handle period change
+  const handlePeriodChange = (period: string) => {
+    setSelectedPeriod(period);
+    const now = new Date();
+    
+    switch (period) {
+      case 'current-week':
+        const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+        updateDateRange(currentWeekStart, addDays(currentWeekStart, 6));
+        break;
+      case 'last-week':
+        const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+        updateDateRange(lastWeekStart, addDays(lastWeekStart, 6));
+        break;
+      case 'current-pay-period':
+        // Assuming bi-weekly pay periods starting on Monday
+        const payPeriodStart = startOfWeek(now, { weekStartsOn: 1 });
+        updateDateRange(payPeriodStart, addDays(payPeriodStart, 13));
+        break;
+      default:
+        // custom - don't change dates
+        break;
+    }
+  };
+
   // Mock employee data fallback
   const getEmployeeFallback = (): Employee => ({
     id: "1",
     name: "John Smith",
     employeeId: employeeId || "EMP001",
-    positionId: "POS123",
-    taxId: "XXX-XX-1575",
+    positionId: "GENERAL_LABOR",
+    taxId: `XXX XXX ${(employeeId || "001").slice(-3)}`,
     status: "Active",
-    rehireDate: "2023-01-15"
+    rehireDate: "Jan 15, 2023"
   });
 
   // Mock timecard entries
@@ -359,31 +389,39 @@ export default function IndividualTimecard() {
       <div className="p-6 space-y-6">
         {/* Employee Header Section */}
         <Card>
-          <CardHeader className="bg-primary text-primary-foreground">
-            <CardTitle className="text-lg font-semibold">Employee Information</CardTitle>
+          <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Employee Information
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Employee Name</Label>
-                <p className="font-semibold">{displayEmployee.name}</p>
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Employee Name</Label>
+                <p className="font-semibold text-lg">{displayEmployee.name}</p>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Employee ID / Position ID</Label>
-                <p className="font-semibold">{displayEmployee.employeeId} / {displayEmployee.positionId}</p>
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Employee ID</Label>
+                <p className="font-semibold font-mono">{displayEmployee.employeeId}</p>
+                <Label className="text-xs text-muted-foreground">Position ID: {displayEmployee.positionId}</Label>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Tax ID</Label>
-                <p className="font-semibold font-mono">{displayEmployee.taxId}</p>
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">SIN (Masked)</Label>
+                <p className="font-semibold font-mono text-lg">{displayEmployee.taxId}</p>
               </div>
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                <div className="flex items-center gap-2">
-                  <Badge variant={displayEmployee.status === "Active" ? "default" : "secondary"}>
-                    {displayEmployee.status}
-                  </Badge>
-                  <span className="text-sm">Rehire: {displayEmployee.rehireDate}</span>
-                </div>
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Rehire Date</Label>
+                <p className="font-semibold">{displayEmployee.rehireDate}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Status</Label>
+                <Badge 
+                  variant={displayEmployee.status === "Active" ? "default" : "secondary"}
+                  className="mt-1 font-semibold"
+                >
+                  {displayEmployee.status}
+                </Badge>
               </div>
             </div>
           </CardContent>
@@ -395,42 +433,84 @@ export default function IndividualTimecard() {
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex-1 min-w-[200px]">
                 <Label htmlFor="time-period">Time Period</Label>
-                <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="current-week">Current Week</SelectItem>
                     <SelectItem value="last-week">Last Week</SelectItem>
+                    <SelectItem value="current-pay-period">Current Pay Period</SelectItem>
                     <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              
               <div>
-                <Label htmlFor="start-date">Start Date</Label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={format(startDate, 'yyyy-MM-dd')}
-                  onChange={(e) => {
-                    const newStart = new Date(e.target.value);
-                    updateDateRange(newStart, endDate);
-                  }}
-                />
+                <Label>Start Date</Label>
+                <Popover open={showStartCalendar} onOpenChange={setShowStartCalendar}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal w-[140px]",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(startDate, "MM/dd/yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          updateDateRange(date, endDate);
+                          setShowStartCalendar(false);
+                        }
+                      }}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
+              
               <div>
-                <Label htmlFor="end-date">End Date</Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={format(endDate, 'yyyy-MM-dd')}
-                  onChange={(e) => {
-                    const newEnd = new Date(e.target.value);
-                    updateDateRange(startDate, newEnd);
-                  }}
-                />
+                <Label>End Date</Label>
+                <Popover open={showEndCalendar} onOpenChange={setShowEndCalendar}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "justify-start text-left font-normal w-[140px]",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(endDate, "MM/dd/yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          updateDateRange(startDate, date);
+                          setShowEndCalendar(false);
+                        }
+                      }}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <Button>
+              
+              <Button className="bg-primary">
                 <Calendar className="h-4 w-4 mr-2" />
                 Find
               </Button>
