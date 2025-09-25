@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Table, 
   TableBody, 
@@ -23,6 +24,7 @@ import {
   Download,
   Filter
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const mockTimesheets = [
   {
@@ -66,14 +68,67 @@ const mockTimesheets = [
 export default function Timesheets() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("pending");
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleEmployeeClick = (employeeId: string) => {
-    navigate(`/timecard/${employeeId}`);
+  const getEmployeeId = (timesheet: any): string | null => {
+    // Try different possible ID field names in order of preference
+    const idFields = ['employeeId', 'associateId', 'empNo', 'id'];
+    
+    for (const field of idFields) {
+      if (timesheet[field]) {
+        return timesheet[field].toString();
+      }
+    }
+    return null;
+  };
+
+  const handleEmployeeClick = (timesheet: any) => {
+    console.log('Row clicked - timesheet object:', timesheet);
+    
+    const employeeId = getEmployeeId(timesheet);
+    
+    if (employeeId) {
+      const detectedField = ['employeeId', 'associateId', 'empNo', 'id'].find(field => timesheet[field]);
+      setDebugInfo(`Using ID: ${employeeId} (from field: ${detectedField})`);
+      
+      toast({
+        title: "Navigation",
+        description: `Opening timecard for Employee ID: ${employeeId}`,
+      });
+      
+      navigate(`/timecard/${employeeId}`);
+    } else {
+      console.error('No valid employee ID found in timesheet:', timesheet);
+      setDebugInfo('Error: No valid employee ID found');
+      
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Unable to find employee ID in timesheet data",
+      });
+    }
   };
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
+      {debugInfo && (
+        <div className="px-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">Debug: {debugInfo}</p>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="mt-2"
+              onClick={() => setDebugInfo("")}
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
       <PageHeader 
         title="Time & Attendance" 
         description="Manage timesheets and approve hours worked"
@@ -202,7 +257,7 @@ export default function Timesheets() {
                       <TableRow 
                         key={timesheet.id} 
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleEmployeeClick(timesheet.employeeId)}
+                        onClick={() => handleEmployeeClick(timesheet)}
                       >
                         <TableCell>
                           <div>
@@ -223,16 +278,23 @@ export default function Timesheets() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEmployeeClick(timesheet.employeeId);
-                              }}
-                            >
-                              Review
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEmployeeClick(timesheet);
+                                  }}
+                                >
+                                  Review
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Open Individual Timecard</p>
+                              </TooltipContent>
+                            </Tooltip>
                             <Button 
                               size="sm" 
                               className="bg-success text-success-foreground"
@@ -276,5 +338,6 @@ export default function Timesheets() {
         </Tabs>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
