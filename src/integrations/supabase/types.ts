@@ -193,6 +193,42 @@ export type Database = {
         }
         Relationships: []
       }
+      company_pay_periods: {
+        Row: {
+          anchor_date: string
+          company_id: string
+          created_at: string
+          frequency: string
+          id: string
+          timezone: string
+          union_code: string | null
+          updated_at: string
+          worksite_id: string | null
+        }
+        Insert: {
+          anchor_date: string
+          company_id: string
+          created_at?: string
+          frequency: string
+          id?: string
+          timezone?: string
+          union_code?: string | null
+          updated_at?: string
+          worksite_id?: string | null
+        }
+        Update: {
+          anchor_date?: string
+          company_id?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          timezone?: string
+          union_code?: string | null
+          updated_at?: string
+          worksite_id?: string | null
+        }
+        Relationships: []
+      }
       cpp_ei_rules: {
         Row: {
           cpp_basic_exemption: number

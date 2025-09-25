@@ -209,31 +209,48 @@ export default function Company() {
           </TabsContent>
           
           <TabsContent value="payroll">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Payroll Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="payFreq">Pay Frequency</Label>
-                    <Input id="payFreq" defaultValue="Bi-weekly" />
+            <div className="space-y-6">
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle>Pay Period Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground mb-4">
+                    Configure pay period schedules for different worksites and unions
+                  </p>
+                  <Button variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Pay Period
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle>Payroll Configuration</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="payFreq">Pay Frequency</Label>
+                      <Input id="payFreq" defaultValue="Bi-weekly" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="remitterType">Remitter Type</Label>
+                      <Input id="remitterType" defaultValue="Regular (Monthly)" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fiscalYear">Fiscal Year End</Label>
+                      <Input id="fiscalYear" defaultValue="December 31" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultGL">Default GL Account</Label>
+                      <Input id="defaultGL" defaultValue="5000 - Wages & Salaries" />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="remitterType">Remitter Type</Label>
-                    <Input id="remitterType" defaultValue="Regular (Monthly)" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fiscalYear">Fiscal Year End</Label>
-                    <Input id="fiscalYear" defaultValue="December 31" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="defaultGL">Default GL Account</Label>
-                    <Input id="defaultGL" defaultValue="5000 - Wages & Salaries" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
           
           <TabsContent value="compliance">
