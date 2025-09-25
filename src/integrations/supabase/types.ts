@@ -50,6 +50,57 @@ export type Database = {
         }
         Relationships: []
       }
+      balance_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          balance_type: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          pay_code: string | null
+          reference_date: string
+          reference_id: string | null
+          reference_type: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          balance_type: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          pay_code?: string | null
+          reference_date: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          balance_type?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          pay_code?: string | null
+          reference_date?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type?: string
+        }
+        Relationships: []
+      }
       cba_wage_tables: {
         Row: {
           cba_id: string
@@ -539,6 +590,87 @@ export type Database = {
           },
         ]
       }
+      employee_balances: {
+        Row: {
+          accrued_balance: number
+          balance_type: string
+          created_at: string
+          current_balance: number
+          effective_date: string
+          employee_id: string
+          id: string
+          notes: string | null
+          policy_annual_accrual: number | null
+          policy_max_balance: number | null
+          policy_max_carryover: number | null
+          updated_at: string
+          used_balance: number
+        }
+        Insert: {
+          accrued_balance?: number
+          balance_type: string
+          created_at?: string
+          current_balance?: number
+          effective_date?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          policy_annual_accrual?: number | null
+          policy_max_balance?: number | null
+          policy_max_carryover?: number | null
+          updated_at?: string
+          used_balance?: number
+        }
+        Update: {
+          accrued_balance?: number
+          balance_type?: string
+          created_at?: string
+          current_balance?: number
+          effective_date?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          policy_annual_accrual?: number | null
+          policy_max_balance?: number | null
+          policy_max_carryover?: number | null
+          updated_at?: string
+          used_balance?: number
+        }
+        Relationships: []
+      }
+      employee_rates: {
+        Row: {
+          base_rate: number
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          id: string
+          rate_type: string
+          updated_at: string
+        }
+        Insert: {
+          base_rate: number
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id: string
+          id?: string
+          rate_type: string
+          updated_at?: string
+        }
+        Update: {
+          base_rate?: number
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          id?: string
+          rate_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: Json
@@ -759,6 +891,7 @@ export type Database = {
           rate_type: string
           requires_amount: boolean
           requires_hours: boolean
+          stackable: boolean
           taxable_flags: Json
           union_code: string | null
           updated_at: string
@@ -782,6 +915,7 @@ export type Database = {
           rate_type?: string
           requires_amount?: boolean
           requires_hours?: boolean
+          stackable?: boolean
           taxable_flags?: Json
           union_code?: string | null
           updated_at?: string
@@ -805,6 +939,7 @@ export type Database = {
           rate_type?: string
           requires_amount?: boolean
           requires_hours?: boolean
+          stackable?: boolean
           taxable_flags?: Json
           union_code?: string | null
           updated_at?: string

@@ -793,14 +793,31 @@ export default function IndividualTimecardMinimal() {
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  <div className="w-40">
+                                  <div className="w-48">
                                     <PayCodeSelector
                                       employeeId={employeeId || ''}
                                       value={entry.payCode}
+                                      hours={entry.hours}
+                                      date={entry.date}
+                                      showCalculation={true}
+                                      isAdmin={true} // TODO: Get from user role
                                       onChange={(payCode) => {
                                         if (payCode) {
                                           setPayCodeMap(prev => ({ ...prev, [entry.id]: payCode }));
                                           updateEntry(entry.id, 'payCode', payCode.code);
+                                        }
+                                      }}
+                                      onHoursChange={(hours) => {
+                                        updateEntry(entry.id, 'timeOut', ''); // Clear time out to recalculate
+                                        // Calculate new time out based on hours
+                                        if (entry.timeIn) {
+                                          const [inHour, inMin] = entry.timeIn.split(':').map(Number);
+                                          const inTime = inHour + inMin / 60;
+                                          const outTime = inTime + hours;
+                                          const outHour = Math.floor(outTime);
+                                          const outMin = Math.round((outTime - outHour) * 60);
+                                          const timeOut = `${outHour.toString().padStart(2, '0')}:${outMin.toString().padStart(2, '0')}`;
+                                          updateEntry(entry.id, 'timeOut', timeOut);
                                         }
                                       }}
                                     />

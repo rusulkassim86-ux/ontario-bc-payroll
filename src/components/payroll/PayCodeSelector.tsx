@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, ChevronsUpDown, Info } from 'lucide-react';
+import { Check, ChevronsUpDown, Info, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,12 +23,21 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useEmployeePayCodes, PayCode } from '@/hooks/usePayCodes';
+import { BalanceIndicator } from './BalanceIndicator';
+import { PayCalculationDisplay } from './PayCalculationDisplay';
 
 interface PayCodeSelectorProps {
   employeeId: string;
   value?: string;
+  hours?: number;
+  amount?: number;
+  date?: Date;
   onChange: (payCode: PayCode | null) => void;
+  onHoursChange?: (hours: number) => void;
+  onAmountChange?: (amount: number) => void;
   disabled?: boolean;
+  showCalculation?: boolean;
+  isAdmin?: boolean;
 }
 
 const categoryColors = {
@@ -41,9 +50,22 @@ const categoryColors = {
   benefit: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
 };
 
-export function PayCodeSelector({ employeeId, value, onChange, disabled }: PayCodeSelectorProps) {
+export function PayCodeSelector({ 
+  employeeId, 
+  value, 
+  hours = 0,
+  amount,
+  date = new Date(),
+  onChange, 
+  onHoursChange,
+  onAmountChange,
+  disabled,
+  showCalculation = false,
+  isAdmin = false
+}: PayCodeSelectorProps) {
   const { allowedPayCodes, loading } = useEmployeePayCodes(employeeId);
   const [open, setOpen] = useState(false);
+  const [showCalcPopover, setShowCalcPopover] = useState(false);
   const [selectedPayCode, setSelectedPayCode] = useState<PayCode | null>(null);
 
   // Find the currently selected pay code
@@ -93,14 +115,14 @@ export function PayCodeSelector({ employeeId, value, onChange, disabled }: PayCo
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-full justify-between"
+              className="w-full justify-between min-w-0"
               disabled={disabled}
             >
               {selectedPayCode ? (
-                <div className="flex items-center gap-2">
-                  <span className="font-mono">{selectedPayCode.code}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono text-xs">{selectedPayCode.code}</span>
                   <span className="text-muted-foreground">•</span>
-                  <span className="truncate">{selectedPayCode.name}</span>
+                  <span className="truncate text-xs">{selectedPayCode.name}</span>
                 </div>
               ) : (
                 "Select pay code..."
@@ -129,9 +151,9 @@ export function PayCodeSelector({ employeeId, value, onChange, disabled }: PayCo
                           )}
                         />
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span className="font-mono font-semibold">{payCode.code}</span>
+                          <span className="font-mono font-semibold text-sm">{payCode.code}</span>
                           <span className="text-muted-foreground">•</span>
-                          <span className="truncate">{payCode.name}</span>
+                          <span className="truncate text-sm">{payCode.name}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -152,6 +174,39 @@ export function PayCodeSelector({ employeeId, value, onChange, disabled }: PayCo
           </PopoverContent>
         </Popover>
         
+        {/* Balance Indicator */}
+        {selectedPayCode && ['pto', 'bank'].includes(selectedPayCode.category) && (
+          <BalanceIndicator 
+            employeeId={employeeId}
+            payCode={selectedPayCode}
+            hours={hours}
+          />
+        )}
+        
+        {/* Pay Calculation Button */}
+        {selectedPayCode && showCalculation && (
+          <Popover open={showCalcPopover} onOpenChange={setShowCalcPopover}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Calculator className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <PayCalculationDisplay
+                employeeId={employeeId}
+                payCode={selectedPayCode}
+                hours={hours}
+                amount={amount}
+                date={date}
+                onHoursChange={onHoursChange}
+                onAmountChange={onAmountChange}
+                isAdmin={isAdmin}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+        
+        {/* Info Tooltip */}
         {selectedPayCode && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -172,6 +227,9 @@ export function PayCodeSelector({ employeeId, value, onChange, disabled }: PayCo
                 )}
                 <div><strong>Hours Required:</strong> {selectedPayCode.requires_hours ? 'Yes' : 'No'}</div>
                 <div><strong>Amount Required:</strong> {selectedPayCode.requires_amount ? 'Yes' : 'No'}</div>
+                {selectedPayCode.stackable && (
+                  <div><strong>Stackable:</strong> Can be combined with other premiums</div>
+                )}
               </div>
             </TooltipContent>
           </Tooltip>

@@ -26,6 +26,7 @@ export interface PayCode {
   effective_from: string;
   effective_to?: string;
   active: boolean;
+  stackable: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +58,10 @@ export function usePayCodes() {
         .order('code', { ascending: true });
 
       if (error) throw error;
-      setPayCodes((data as PayCode[]) || []);
+      setPayCodes((data || []).map(item => ({
+        ...item,
+        taxable_flags: item.taxable_flags as { federal: boolean; cpp: boolean; ei: boolean; }
+      })) as PayCode[]);
     } catch (err) {
       console.error('Error fetching pay codes:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -217,7 +221,10 @@ export function useEmployeePayCodes(employeeId: string) {
           .lte('effective_from', new Date().toISOString())
           .or(`effective_to.is.null,effective_to.gte.${new Date().toISOString()}`);
 
-        if (!error) specificCodes = (data as PayCode[]) || [];
+        if (!error) specificCodes = (data || []).map(item => ({
+          ...item,
+          taxable_flags: item.taxable_flags as { federal: boolean; cpp: boolean; ei: boolean; }
+        })) as PayCode[];
       }
 
       // Combine all available codes
