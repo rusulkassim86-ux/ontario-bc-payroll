@@ -322,6 +322,16 @@ export default function Timesheets() {
                             <p className="text-xs text-muted-foreground/70 italic">
                               Debug: {detectedField} = {employeeId || 'NOT_FOUND'}
                             </p>
+                            {/* Full row object as JSON */}
+                            <div className="mt-2 p-2 bg-slate-100 rounded text-xs font-mono max-w-xs overflow-auto">
+                              <p className="font-semibold text-blue-600 mb-1">Full Row Object:</p>
+                              <pre className="whitespace-pre-wrap text-[10px]">
+                                {JSON.stringify(timesheet, null, 2)}
+                              </pre>
+                              <p className="font-semibold text-green-600 mt-1">
+                                Employee ID Field: <span className="bg-yellow-200 px-1 rounded">{detectedField}</span>
+                              </p>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -368,6 +378,7 @@ export default function Timesheets() {
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    console.log('Review button clicked - Full row object:', timesheet);
                                     handleEmployeeClick(timesheet);
                                   }}
                                 >
