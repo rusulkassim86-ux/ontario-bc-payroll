@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -69,6 +70,7 @@ export default function Timesheets() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("pending");
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [directEmployeeId, setDirectEmployeeId] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -109,6 +111,25 @@ export default function Timesheets() {
         description: "Unable to find employee ID in timesheet data",
       });
     }
+  };
+
+  const handleDirectTimecardOpen = () => {
+    if (!directEmployeeId.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter an Employee ID",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Navigation",
+      description: `Opening timecard for Employee ID: ${directEmployeeId}`,
+    });
+    
+    navigate(`/timecard/${directEmployeeId.trim()}`);
+    setDirectEmployeeId(""); // Clear input after navigation
   };
 
   return (
@@ -238,6 +259,31 @@ export default function Timesheets() {
                 <CardTitle>Timesheets Pending Approval</CardTitle>
               </CardHeader>
               <CardContent>
+                {/* Direct Employee ID Input */}
+                <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+                  <div className="flex items-end gap-3 max-w-md">
+                    <div className="flex-1">
+                      <Label htmlFor="direct-employee-id" className="text-sm font-medium">
+                        Quick Access
+                      </Label>
+                      <Input
+                        id="direct-employee-id"
+                        placeholder="Enter Employee ID…"
+                        value={directEmployeeId}
+                        onChange={(e) => setDirectEmployeeId(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleDirectTimecardOpen();
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button onClick={handleDirectTimecardOpen}>
+                      Open Timecard
+                    </Button>
+                  </div>
+                </div>
+                
                 <Table>
                   <TableHeader>
                     <TableRow>
