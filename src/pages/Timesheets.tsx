@@ -337,7 +337,7 @@ export default function Timesheets() {
                         </TableCell>
                          <TableCell>
                            {(() => {
-                             const employeeId = getEmployeeId(timesheet);
+                             const employeeId = (timesheet as any).employeeId || (timesheet as any).associateId || (timesheet as any).empNo || (timesheet as any).id;
                              return employeeId ? (
                                <Button 
                                  size="sm" 
@@ -356,6 +356,14 @@ export default function Timesheets() {
                                      size="sm" 
                                      disabled
                                      variant="outline"
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       toast({
+                                         variant: "destructive",
+                                         title: "Error",
+                                         description: "Missing employee id in row data",
+                                       });
+                                     }}
                                    >
                                      Open Timecard
                                    </Button>
@@ -377,8 +385,8 @@ export default function Timesheets() {
                                    onClick={(e) => {
                                      e.stopPropagation();
                                      
-                                     // Try to find employee ID in order of preference
-                                     const employeeId = (timesheet as any).employeeId || (timesheet as any).associateId || (timesheet as any).empNo || (timesheet as any).id;
+                                      // Try to find employee ID in order of preference
+                                      const employeeId = (timesheet as any).employeeId || (timesheet as any).associateId || (timesheet as any).empNo || (timesheet as any).id;
                                      
                                      if (employeeId) {
                                        navigate(`/timecard/${employeeId}`);
