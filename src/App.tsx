@@ -16,6 +16,9 @@ import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
 import SecurityCenter from "./pages/SecurityCenter";
 import BackupRestore from "./pages/BackupRestore";
+import DeviceMapping from "./pages/DeviceMapping";
+import PunchFeed from "./pages/PunchFeed";
+import PunchConfig from "./pages/PunchConfig";
 import NotFound from "./pages/NotFound";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 
@@ -42,6 +45,9 @@ const App = () => (
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/security-center" element={<SecurityCenter />} />
                 <Route path="/backup-restore" element={<BackupRestore />} />
+                <Route path="/device-mapping" element={<DeviceMapping />} />
+                <Route path="/punch-feed" element={<PunchFeed />} />
+                <Route path="/punch-config" element={<PunchConfig />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AppLayout>

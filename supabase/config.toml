@@ -1,1 +1,4 @@
 project_id = "uvqbherbvniargugdimb"
+
+[functions.punches-webhook]
+verify_jwt = false
