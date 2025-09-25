@@ -26,15 +26,6 @@ export function SecurityStatusBadge() {
     alertsCount: 0
   });
 
-  useEffect(() => {
-    checkSecurityStatus();
-  }, []);
-
-  // Only show for admin users
-  if (!profile || !['org_admin', 'payroll_admin'].includes(profile.role)) {
-    return null;
-  }
-
   const checkSecurityStatus = async () => {
     try {
       // Check TLS
@@ -78,6 +69,15 @@ export function SecurityStatusBadge() {
     }
   };
 
+  useEffect(() => {
+    if (!profile || !['org_admin', 'payroll_admin'].includes(profile.role)) return;
+    checkSecurityStatus();
+  }, [profile?.role]);
+
+  // Only show for admin users
+  if (!profile || !['org_admin', 'payroll_admin'].includes(profile.role)) {
+    return null;
+  }
   const getOverallStatus = () => {
     const checks = [
       status.tls,
