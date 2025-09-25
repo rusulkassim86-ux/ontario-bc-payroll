@@ -801,56 +801,74 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_locked_until: string | null
           avatar_url: string | null
+          backup_codes: string[] | null
           company_id: string | null
           created_at: string
           email: string
           employee_id: string | null
+          failed_login_attempts: number | null
           first_name: string
           id: string
           is_active: boolean
+          last_2fa_verification: string | null
           last_login_at: string | null
           last_name: string
           permissions: Json
           phone: string | null
           role: string
           settings: Json
+          two_factor_enabled: boolean | null
+          two_factor_secret: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_locked_until?: string | null
           avatar_url?: string | null
+          backup_codes?: string[] | null
           company_id?: string | null
           created_at?: string
           email: string
           employee_id?: string | null
+          failed_login_attempts?: number | null
           first_name: string
           id?: string
           is_active?: boolean
+          last_2fa_verification?: string | null
           last_login_at?: string | null
           last_name: string
           permissions?: Json
           phone?: string | null
           role?: string
           settings?: Json
+          two_factor_enabled?: boolean | null
+          two_factor_secret?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_locked_until?: string | null
           avatar_url?: string | null
+          backup_codes?: string[] | null
           company_id?: string | null
           created_at?: string
           email?: string
           employee_id?: string | null
+          failed_login_attempts?: number | null
           first_name?: string
           id?: string
           is_active?: boolean
+          last_2fa_verification?: string | null
           last_login_at?: string | null
           last_name?: string
           permissions?: Json
           phone?: string | null
           role?: string
           settings?: Json
+          two_factor_enabled?: boolean | null
+          two_factor_secret?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1168,6 +1186,31 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: string
+      }
+      get_current_user_company: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_employee_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      log_sensitive_action: {
+        Args: {
+          action_type: string
+          entity_id: string
+          entity_type: string
+          sensitive_fields?: Json
+        }
+        Returns: string
+      }
+      require_2fa_for_admin_action: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
     }
     Enums: {

@@ -16,6 +16,12 @@ interface Profile {
   is_active: boolean;
   permissions: any;
   settings: any;
+  two_factor_enabled?: boolean;
+  two_factor_secret?: string | null;
+  backup_codes?: string[] | null;
+  last_2fa_verification?: string | null;
+  failed_login_attempts?: number;
+  account_locked_until?: string | null;
 }
 
 interface AuthContextType {
