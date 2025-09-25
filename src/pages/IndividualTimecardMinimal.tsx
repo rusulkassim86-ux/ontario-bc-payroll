@@ -12,7 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, ChevronLeft, ChevronRight, Info, FileText } from "lucide-react";
+import * as XLSX from 'xlsx';
 import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, isMonday, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -358,6 +359,150 @@ export default function IndividualTimecardMinimal() {
     });
   };
 
+  const exportToExcel = () => {
+    try {
+      const workbook = XLSX.utils.book_new();
+      const worksheetData: any[][] = [];
+
+      // Header row
+      worksheetData.push([
+        'Approve',
+        'Weekday', 
+        'Date',
+        'In',
+        'Out',
+        'Pay Code',
+        'Hours',
+        'Department',
+        'Daily Totals'
+      ]);
+
+      // Process each week
+      for (let weekNumber = 1; weekNumber <= 2; weekNumber++) {
+        // Week header
+        worksheetData.push([`Week ${weekNumber}`, '', '', '', '', '', '', '', '']);
+        
+        // Week data
+        const weekData = entries.filter((entry, index) => {
+          return weekNumber === 1 ? index < 7 : index >= 7;
+        });
+
+        weekData.forEach((entry, entryIndex) => {
+          const globalIndex = weekNumber === 1 ? entryIndex : entryIndex + 7;
+          const processedEntry = totalsData.processedEntries[globalIndex];
+          const dailyTotal = processedEntry.calculatedReg + processedEntry.calculatedDailyOT + processedEntry.calculatedOther;
+          
+          worksheetData.push([
+            entry.approved ? 'Yes' : 'No',
+            entry.weekday,
+            format(entry.date, 'yyyy-MM-dd'),
+            entry.timeIn || '',
+            entry.timeOut || '',
+            entry.payCode,
+            entry.hours.toFixed(2),
+            entry.department,
+            dailyTotal.toFixed(2)
+          ]);
+        });
+
+        // Weekly totals
+        const wt = totalsData.weeklyTotals[weekNumber - 1];
+        const weeklyTotal = wt.reg + wt.dailyOT + wt.weeklyOT + wt.stat + wt.vac + wt.sick;
+        
+        worksheetData.push([
+          'WEEKLY TOTALS',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          `REG: ${wt.reg.toFixed(2)} | Daily OT: ${wt.dailyOT.toFixed(2)} | Weekly OT: ${wt.weeklyOT.toFixed(2)} | STAT: ${wt.stat.toFixed(2)} | VAC: ${wt.vac.toFixed(2)} | SICK: ${wt.sick.toFixed(2)} | Total: ${weeklyTotal.toFixed(2)}`
+        ]);
+
+        // Add spacing between weeks
+        if (weekNumber === 1) {
+          worksheetData.push(['', '', '', '', '', '', '', '', '']);
+        }
+      }
+
+      // Period totals
+      const pt = totalsData.periodTotals;
+      const periodTotal = pt.reg + pt.dailyOT + pt.weeklyOT + pt.stat + pt.vac + pt.sick;
+      
+      worksheetData.push(['', '', '', '', '', '', '', '', '']);
+      worksheetData.push([
+        'PERIOD TOTALS',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        `REG: ${pt.reg.toFixed(2)} | Daily OT: ${pt.dailyOT.toFixed(2)} | Weekly OT: ${pt.weeklyOT.toFixed(2)} | STAT: ${pt.stat.toFixed(2)} | VAC: ${pt.vac.toFixed(2)} | SICK: ${pt.sick.toFixed(2)} | Total: ${periodTotal.toFixed(2)}`
+      ]);
+
+      // Create worksheet
+      const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+      // Apply styling
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      
+      // Header row styling
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+        if (!worksheet[cellAddress]) continue;
+        worksheet[cellAddress].s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: 'D3D3D3' } },
+          border: {
+            top: { style: 'thin' },
+            bottom: { style: 'thin' },
+            left: { style: 'thin' },
+            right: { style: 'thin' }
+          }
+        };
+      }
+
+      // Set column widths
+      worksheet['!cols'] = [
+        { width: 10 }, // Approve
+        { width: 12 }, // Weekday
+        { width: 12 }, // Date
+        { width: 12 }, // In
+        { width: 12 }, // Out
+        { width: 12 }, // Pay Code
+        { width: 10 }, // Hours
+        { width: 15 }, // Department
+        { width: 25 }  // Daily Totals
+      ];
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Timecard');
+
+      // Generate filename
+      const startDate = format(periodDates.start, 'yyyy-MM-dd');
+      const endDate = format(periodDates.end, 'yyyy-MM-dd');
+      const filename = `timecard_${employeeId}_${startDate}_${endDate}.xlsx`;
+
+      // Export file
+      XLSX.writeFile(workbook, filename);
+
+      toast({
+        title: "Excel exported",
+        description: `Timecard exported as ${filename}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const totalsData = calculateTotalsWithOT();
   const periodLabel = getPeriodLabel();
 
@@ -378,6 +523,10 @@ export default function IndividualTimecardMinimal() {
             <Button variant="outline" size="sm" onClick={handleExportPDF}>
               <Download className="h-4 w-4 mr-2" />
               Export PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportToExcel}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export to Excel
             </Button>
             <Button variant="outline" size="sm" onClick={handleSave}>
               <Save className="h-4 w-4 mr-2" />
