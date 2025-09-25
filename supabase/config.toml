@@ -1,4 +1,23 @@
 project_id = "uvqbherbvniargugdimb"
 
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+enable_email_confirmations = false
+
 [functions.punches-webhook]
 verify_jwt = false
+
+[functions.punch-csv-import]
+verify_jwt = true

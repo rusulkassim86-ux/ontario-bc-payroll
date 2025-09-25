@@ -26,6 +26,7 @@ import {
   Filter
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PunchCSVImport } from "@/components/punch/PunchCSVImport";
 
 const mockTimesheets = [
   {
@@ -154,10 +155,13 @@ export default function Timesheets() {
         title="Time & Attendance" 
         description="Manage timesheets and approve hours worked"
         action={
-          <Button className="bg-gradient-primary">
-            <Plus className="w-4 h-4 mr-2" />
-            New Timesheet
-          </Button>
+          <div className="flex gap-2">
+            <PunchCSVImport />
+            <Button className="bg-gradient-primary">
+              <Plus className="w-4 h-4 mr-2" />
+              New Timesheet
+            </Button>
+          </div>
         }
       />
       
