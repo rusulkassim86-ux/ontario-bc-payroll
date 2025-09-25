@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -14,22 +14,30 @@ import {
 import { SecurityStatusBadge } from "@/components/security/SecurityStatusBadge";
 import { useLocation } from "react-router-dom";
 
-const menuItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Company Setup", url: "/company", icon: Building2 },
-  { title: "Employees", url: "/employees", icon: Users },
-  { title: "Time & Attendance", url: "/timesheets", icon: Clock },
-  { title: "Payroll", url: "/payroll", icon: Calculator },
-  { title: "Reports", url: "/reports", icon: BarChart3 },
-  { title: "Documents", url: "/documents", icon: FileText },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
-
-const securityItems = [
-  { title: "User Management", url: "/user-management", icon: Users },
-  { title: "Security Center", url: "/security-center", icon: Shield },
-  { title: "Backup & Restore", url: "/backup-restore", icon: Database },
-];
+const menuGroups = {
+  "Main": [
+    { title: "Dashboard", url: "/", icon: Home },
+    { title: "Company Setup", url: "/company", icon: Building2 },
+    { title: "Employees", url: "/employees", icon: Users },
+  ],
+  "Time & Attendance": [
+    { title: "Timesheets", url: "/timesheets", icon: Clock },
+    { title: "Individual Timecard", url: "/individual-timecard", icon: FileText },
+    { title: "Devices", url: "/devices", icon: Smartphone },
+    { title: "Device Mapping", url: "/device-mapping", icon: Activity },
+    { title: "Punch Feed", url: "/punch-feed", icon: Clock },
+    { title: "Punch Config", url: "/punch-config", icon: Settings },
+  ],
+  "Payroll & Reports": [
+    { title: "Payroll", url: "/payroll", icon: Calculator },
+    { title: "Reports", url: "/reports", icon: BarChart3 },
+  ],
+  "Security": [
+    { title: "User Management", url: "/user-management", icon: Users },
+    { title: "Security Center", url: "/security-center", icon: Shield },
+    { title: "Backup & Restore", url: "/backup-restore", icon: Database },
+  ]
+};
 
 export function AppSidebar() {
   const location = useLocation();
@@ -49,49 +57,29 @@ export function AppSidebar() {
       </SidebarHeader>
       
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location.pathname === item.url}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
-                  >
-                    <a href={item.url} className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Security & Admin</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {securityItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={location.pathname === item.url}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
-                  >
-                    <a href={item.url} className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {Object.entries(menuGroups).map(([groupName, items]) => (
+          <SidebarGroup key={groupName}>
+            <SidebarGroupLabel>{groupName}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {items.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={location.pathname === item.url}
+                      className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                    >
+                      <a href={item.url} className="flex items-center gap-3">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.title}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="p-4 space-y-2">

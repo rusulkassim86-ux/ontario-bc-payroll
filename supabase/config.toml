@@ -21,3 +21,9 @@ verify_jwt = false
 
 [functions.punch-csv-import]
 verify_jwt = true
+
+[functions.test-webhook]
+verify_jwt = true
+
+[functions.device-sync]
+verify_jwt = true
