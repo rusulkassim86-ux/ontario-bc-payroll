@@ -12,13 +12,17 @@ import Employees from "./pages/Employees";
 import Timesheets from "./pages/Timesheets";
 import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
+import SecurityCenter from "./pages/SecurityCenter";
+import BackupRestore from "./pages/BackupRestore";
 import NotFound from "./pages/NotFound";
+import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <HTTPSEnforcer />
       <AuthProvider>
         <AuthGuard>
           <Toaster />
@@ -32,6 +36,8 @@ const App = () => (
                 <Route path="/timesheets" element={<Timesheets />} />
                 <Route path="/payroll" element={<Payroll />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/security-center" element={<SecurityCenter />} />
+                <Route path="/backup-restore" element={<BackupRestore />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </AppLayout>

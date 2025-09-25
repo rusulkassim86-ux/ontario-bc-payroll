@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -11,6 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter
 } from "@/components/ui/sidebar";
+import { SecurityStatusBadge } from "@/components/security/SecurityStatusBadge";
 import { useLocation } from "react-router-dom";
 
 const menuItems = [
@@ -22,6 +23,11 @@ const menuItems = [
   { title: "Reports", url: "/reports", icon: BarChart3 },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Settings", url: "/settings", icon: Settings },
+];
+
+const securityItems = [
+  { title: "Security Center", url: "/security-center", icon: Shield },
+  { title: "Backup & Restore", url: "/backup-restore", icon: Database },
 ];
 
 export function AppSidebar() {
@@ -63,9 +69,32 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Security & Admin</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {securityItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location.pathname === item.url}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                  >
+                    <a href={item.url} className="flex items-center gap-3">
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-2">
+        <SecurityStatusBadge />
         <div className="bg-muted rounded-lg p-3 text-center">
           <p className="text-xs text-muted-foreground">
             Canadian Payroll Compliance
