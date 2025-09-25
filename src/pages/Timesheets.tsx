@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,11 @@ const mockTimesheets = [
 export default function Timesheets() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("pending");
+  const navigate = useNavigate();
+
+  const handleEmployeeClick = (employeeId: string) => {
+    navigate(`/individual-timecard?employee=${employeeId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -193,7 +199,11 @@ export default function Timesheets() {
                     {mockTimesheets
                       .filter(ts => ts.status === "Pending Approval")
                       .map((timesheet) => (
-                      <TableRow key={timesheet.id}>
+                      <TableRow 
+                        key={timesheet.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleEmployeeClick(timesheet.employeeId)}
+                      >
                         <TableCell>
                           <div>
                             <p className="font-medium">{timesheet.employee}</p>
@@ -213,8 +223,23 @@ export default function Timesheets() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">Review</Button>
-                            <Button size="sm" className="bg-success text-success-foreground">Approve</Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEmployeeClick(timesheet.employeeId);
+                              }}
+                            >
+                              Review
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="bg-success text-success-foreground"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Approve
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

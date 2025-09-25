@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Download, Save, Check } from "lucide-react";
+import { Calendar, Download, Save, Check, ArrowLeft } from "lucide-react";
 import { format, addDays, startOfWeek, isSameWeek } from "date-fns";
 
 interface TimecardEntry {
@@ -35,21 +36,51 @@ interface Employee {
 }
 
 export default function IndividualTimecard() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState("current-week");
   const [startDate, setStartDate] = useState(() => startOfWeek(new Date()));
   const [endDate, setEndDate] = useState(() => addDays(startOfWeek(new Date()), 6));
   const [activeTab, setActiveTab] = useState("timecard");
   
-  // Mock employee data
-  const employee: Employee = {
-    id: "1",
-    name: "John Smith",
-    employeeId: "EMP001",
-    positionId: "POS123",
-    taxId: "XXX XXX 575",
-    status: "Active",
-    rehireDate: "2023-01-15"
+  const employeeId = searchParams.get("employee");
+  
+  // Mock employee data - in real app this would come from API based on employeeId
+  const getEmployeeData = (id: string | null): Employee => {
+    const employees = {
+      "EMP001": {
+        id: "1",
+        name: "John Smith",
+        employeeId: "EMP001",
+        positionId: "POS123",
+        taxId: "XXX-XX-1575",
+        status: "Active" as const,
+        rehireDate: "2023-01-15"
+      },
+      "EMP002": {
+        id: "2",
+        name: "Sarah Chen",
+        employeeId: "EMP002",
+        positionId: "POS124",
+        taxId: "XXX-XX-2890",
+        status: "Active" as const,
+        rehireDate: "2022-06-10"
+      },
+      "EMP003": {
+        id: "3",
+        name: "Mike Johnson",
+        employeeId: "EMP003",
+        positionId: "POS125",
+        taxId: "XXX-XX-3456",
+        status: "Active" as const,
+        rehireDate: "2023-03-22"
+      }
+    };
+    
+    return employees[id as keyof typeof employees] || employees["EMP001"];
   };
+  
+  const employee = getEmployeeData(employeeId);
 
   // Mock timecard entries
   const [entries, setEntries] = useState<TimecardEntry[]>([
@@ -143,7 +174,15 @@ export default function IndividualTimecard() {
       <PageHeader
         title="Individual Timecard"
         action={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate("/timesheets")}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Timesheets
+            </Button>
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Export PDF
@@ -152,7 +191,7 @@ export default function IndividualTimecard() {
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
-            <Button size="sm">
+            <Button size="sm" className="bg-success text-success-foreground">
               <Check className="h-4 w-4 mr-2" />
               Approve Timecard
             </Button>
