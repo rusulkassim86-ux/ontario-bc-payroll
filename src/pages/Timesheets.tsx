@@ -254,7 +254,15 @@ export default function Timesheets() {
                   <TableBody>
                     {mockTimesheets
                       .filter(ts => ts.status === "Pending Approval")
-                      .map((timesheet) => (
+                      .map((timesheet) => {
+                        // Debug: Console log the full row object
+                        console.log('Row object:', timesheet);
+                        
+                        // Get the detected employee ID and field name
+                        const employeeId = getEmployeeId(timesheet);
+                        const detectedField = ['employeeId', 'associateId', 'empNo', 'id'].find(field => timesheet[field]);
+                        
+                        return (
                       <TableRow 
                         key={timesheet.id} 
                         className="cursor-pointer hover:bg-muted/50"
@@ -264,6 +272,10 @@ export default function Timesheets() {
                           <div>
                             <p className="font-medium">{timesheet.employee}</p>
                             <p className="text-sm text-muted-foreground">{timesheet.employeeId}</p>
+                            {/* Debug caption showing detected ID */}
+                            <p className="text-xs text-muted-foreground/70 italic">
+                              Debug: {detectedField} = {employeeId || 'NOT_FOUND'}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -330,7 +342,7 @@ export default function Timesheets() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )})}
                   </TableBody>
                 </Table>
               </CardContent>
