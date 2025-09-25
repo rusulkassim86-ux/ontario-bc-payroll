@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon } from "lucide-react";
-import { format, addDays, startOfWeek, isSameWeek, parseISO } from "date-fns";
+import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, isMonday, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -41,14 +41,71 @@ interface Employee {
 export default function IndividualTimecardMinimal() {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   
-  const [selectedPeriod, setSelectedPeriod] = useState("current-week");
-  const [startDate, setStartDate] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [endDate, setEndDate] = useState(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 6));
+  // Calculate bi-weekly pay period (14 days)
+  const calculatePayPeriod = (referenceDate: Date = new Date()) => {
+    // Find the most recent Monday on or before the reference date
+    let anchor = referenceDate;
+    while (!isMonday(anchor)) {
+      anchor = subDays(anchor, 1);
+    }
+    
+    // Pay period is 14 days starting from the anchor Monday
+    const start = anchor;
+    const end = addDays(start, 13); // 14 days total (0-13)
+    
+    return { start, end };
+  };
+
+  // Initialize dates from URL params or calculate default bi-weekly period
+  const initializeDates = () => {
+    const startParam = searchParams.get("start");
+    const endParam = searchParams.get("end");
+    
+    if (startParam && endParam) {
+      const urlStart = parseISO(startParam);
+      const urlEnd = parseISO(endParam);
+      const daysDiff = differenceInDays(urlEnd, urlStart) + 1;
+      
+      // If 7-day period provided, auto-expand to 14 days
+      if (daysDiff === 7) {
+        const expanded = calculatePayPeriod(urlStart);
+        toast({
+          title: "Pay period adjusted to bi-weekly",
+          description: "The 7-day period has been expanded to the full 14-day pay period.",
+          duration: 4000,
+        });
+        return expanded;
+      }
+      
+      // If exactly 14 days, use as-is
+      if (daysDiff === 14) {
+        return { start: urlStart, end: urlEnd };
+      }
+      
+      // If other length, calculate proper period
+      return calculatePayPeriod(urlStart);
+    }
+    
+    // Default to current bi-weekly period
+    return calculatePayPeriod();
+  };
+
+  const [selectedPeriod, setSelectedPeriod] = useState("current-pay-period");
+  const [periodDates, setPeriodDates] = useState(initializeDates());
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
   const [activeTab, setActiveTab] = useState("timecard");
+
+  // Update URL when dates change
+  useEffect(() => {
+    setSearchParams({
+      start: format(periodDates.start, 'yyyy-MM-dd'),
+      end: format(periodDates.end, 'yyyy-MM-dd')
+    });
+  }, [periodDates, setSearchParams]);
 
   // Mock employee data based on employeeId
   const employee: Employee = {
@@ -60,31 +117,59 @@ export default function IndividualTimecardMinimal() {
     status: "Active"
   };
 
-  // Mock timecard entries
-  const [entries, setEntries] = useState<TimecardEntry[]>([
-    {
-      id: "1",
-      date: new Date(),
-      weekday: "Mon",
-      timeIn: "08:00",
-      timeOut: "17:00",
-      payCode: "REG",
-      hours: 8.0,
-      department: "0000700",
-      approved: false
-    },
-    {
-      id: "2",
-      date: addDays(new Date(), 1),
-      weekday: "Tue",
-      timeIn: "08:00",
-      timeOut: "17:00",
-      payCode: "REG",
-      hours: 8.0,
-      department: "0000700",
-      approved: false
+  // Generate mock timecard entries for bi-weekly period (14 days)
+  const generateBiWeeklyEntries = () => {
+    const entries: TimecardEntry[] = [];
+    
+    for (let i = 0; i < 14; i++) {
+      const date = addDays(periodDates.start, i);
+      const weekday = format(date, 'EEE');
+      
+      // Skip weekends for regular entries, but include them as empty rows
+      const isWeekend = weekday === 'Sat' || weekday === 'Sun';
+      
+      entries.push({
+        id: `day-${i}`,
+        date,
+        weekday,
+        timeIn: isWeekend ? "" : "08:00",
+        timeOut: isWeekend ? "" : "17:00", 
+        payCode: "REG",
+        hours: isWeekend ? 0 : 8.0,
+        department: "0000700",
+        approved: false
+      });
     }
-  ]);
+    
+    return entries;
+  };
+
+  const [entries, setEntries] = useState<TimecardEntry[]>(generateBiWeeklyEntries());
+
+  // Regenerate entries when period changes
+  useEffect(() => {
+    setEntries(generateBiWeeklyEntries());
+  }, [periodDates]);
+
+  // Period navigation functions
+  const navigateToPreviousPeriod = () => {
+    const newStart = subDays(periodDates.start, 14);
+    const newEnd = addDays(newStart, 13);
+    setPeriodDates({ start: newStart, end: newEnd });
+  };
+
+  const navigateToNextPeriod = () => {
+    const newStart = addDays(periodDates.start, 14);
+    const newEnd = addDays(newStart, 13);
+    setPeriodDates({ start: newStart, end: newEnd });
+  };
+
+  // Format period label
+  const getPeriodLabel = () => {
+    const startLabel = format(periodDates.start, 'EEE MMM dd');
+    const endLabel = format(periodDates.end, 'EEE MMM dd, yyyy');
+    return `${startLabel} – ${endLabel} (14 days)`;
+  };
 
   const payCodeOptions = ["REG", "OT", "STAT", "VAC", "SICK"];
   const departmentOptions = ["0000700", "0000701", "0000702", "0000703"];
@@ -123,24 +208,36 @@ export default function IndividualTimecardMinimal() {
     }));
   };
 
-  const getWeekDays = () => {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(startDate, i);
-      days.push({
-        date,
-        weekday: format(date, 'EEE'),
-        fullDate: format(date, 'MM/dd/yyyy')
-      });
-    }
-    return days;
-  };
-
+  // Calculate totals for bi-weekly period with overtime rules
   const getTotalsByPayCode = () => {
     const totals: Record<string, number> = {};
-    entries.forEach(entry => {
+    let weeklyTotals = [0, 0]; // Track hours for each week
+    
+    entries.forEach((entry, index) => {
+      const weekIndex = Math.floor(index / 7); // 0 for first week, 1 for second week
+      
+      // Add to pay code totals
       totals[entry.payCode] = (totals[entry.payCode] || 0) + entry.hours;
+      
+      // Track weekly totals for OT calculation
+      if (entry.payCode === 'REG') {
+        weeklyTotals[weekIndex] += entry.hours;
+      }
     });
+    
+    // Calculate weekly overtime (hours over 40 per week)
+    let weeklyOT = 0;
+    weeklyTotals.forEach(weekHours => {
+      if (weekHours > 40) {
+        weeklyOT += weekHours - 40;
+      }
+    });
+    
+    // Add calculated overtime to totals
+    if (weeklyOT > 0) {
+      totals['Weekly OT'] = weeklyOT;
+    }
+    
     return totals;
   };
 
@@ -165,7 +262,6 @@ export default function IndividualTimecardMinimal() {
     });
   };
 
-  const weekDays = getWeekDays();
   const totalsByPayCode = getTotalsByPayCode();
 
   return (
@@ -238,6 +334,45 @@ export default function IndividualTimecardMinimal() {
           </CardContent>
         </Card>
 
+        {/* Pay Period Navigator */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={navigateToPreviousPeriod}
+                  className="flex items-center gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous Period
+                </Button>
+                
+                <div className="text-center">
+                  <p className="text-lg font-semibold">{getPeriodLabel()}</p>
+                  <p className="text-sm text-muted-foreground">Bi-weekly Pay Period</p>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={navigateToNextPeriod}
+                  className="flex items-center gap-2"
+                >
+                  Next Period
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">14-day period</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Date Range Selector */}
         <Card>
           <CardContent className="p-4">
@@ -249,9 +384,8 @@ export default function IndividualTimecardMinimal() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="current-week">Current Week</SelectItem>
-                    <SelectItem value="last-week">Last Week</SelectItem>
                     <SelectItem value="current-pay-period">Current Pay Period</SelectItem>
+                    <SelectItem value="last-pay-period">Previous Pay Period</SelectItem>
                     <SelectItem value="custom">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
@@ -265,20 +399,21 @@ export default function IndividualTimecardMinimal() {
                       variant="outline"
                       className={cn(
                         "justify-start text-left font-normal w-[140px]",
-                        !startDate && "text-muted-foreground"
+                        !periodDates.start && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(startDate, "MM/dd/yyyy")}
+                      {format(periodDates.start, "MM/dd/yyyy")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
-                      selected={startDate}
+                      selected={periodDates.start}
                       onSelect={(date) => {
                         if (date) {
-                          setStartDate(date);
+                          const newPeriod = calculatePayPeriod(date);
+                          setPeriodDates(newPeriod);
                           setShowStartCalendar(false);
                         }
                       }}
@@ -297,20 +432,21 @@ export default function IndividualTimecardMinimal() {
                       variant="outline"
                       className={cn(
                         "justify-start text-left font-normal w-[140px]",
-                        !endDate && "text-muted-foreground"
+                        !periodDates.end && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(endDate, "MM/dd/yyyy")}
+                      {format(periodDates.end, "MM/dd/yyyy")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
-                      selected={endDate}
+                      selected={periodDates.end}
                       onSelect={(date) => {
                         if (date) {
-                          setEndDate(date);
+                          const newPeriod = calculatePayPeriod(date);
+                          setPeriodDates(newPeriod);
                           setShowEndCalendar(false);
                         }
                       }}
@@ -360,96 +496,97 @@ export default function IndividualTimecardMinimal() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {weekDays.map((day, index) => {
-                        const dayEntries = entries.filter(entry => 
-                          isSameWeek(entry.date, day.date) && 
-                          format(entry.date, 'EEE') === day.weekday
-                        );
+                      {entries.map((entry, index) => {
+                        const isWeekend = entry.weekday === 'Sat' || entry.weekday === 'Sun';
+                        const weekNumber = Math.floor(index / 7) + 1;
+                        const isFirstDayOfWeek = index % 7 === 0;
                         
-                        if (dayEntries.length === 0) {
-                          dayEntries.push({
-                            id: `new-${index}`,
-                            date: day.date,
-                            weekday: day.weekday,
-                            timeIn: "",
-                            timeOut: "",
-                            payCode: "REG",
-                            hours: 0,
-                            department: "0000700",
-                            approved: false
-                          });
-                        }
-
-                        return dayEntries.map((entry, entryIndex) => {
-                          const dailyTotal = dayEntries.reduce((sum, e) => sum + e.hours, 0);
-                          
-                          return (
-                            <TableRow key={`${entry.id}-${entryIndex}`} className="hover:bg-muted/20">
-                              <TableCell className="text-center">
-                                <Checkbox
-                                  checked={entry.approved}
-                                  onCheckedChange={(checked) => 
-                                    updateEntry(entry.id, 'approved', checked)
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell className="font-medium">{day.weekday}</TableCell>
-                              <TableCell>{day.fullDate}</TableCell>
-                              <TableCell>
-                                <Input
-                                  type="time"
-                                  value={entry.timeIn}
-                                  onChange={(e) => updateEntry(entry.id, 'timeIn', e.target.value)}
-                                  className="w-full"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  type="time"
-                                  value={entry.timeOut}
-                                  onChange={(e) => updateEntry(entry.id, 'timeOut', e.target.value)}
-                                  className="w-full"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Select 
-                                  value={entry.payCode}
-                                  onValueChange={(value) => updateEntry(entry.id, 'payCode', value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {payCodeOptions.map(code => (
-                                      <SelectItem key={code} value={code}>{code}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell className="text-right font-mono">
-                                {entry.hours.toFixed(2)}
-                              </TableCell>
-                              <TableCell>
-                                <Select 
-                                  value={entry.department}
-                                  onValueChange={(value) => updateEntry(entry.id, 'department', value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {departmentOptions.map(dept => (
-                                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell className="text-right font-mono font-semibold">
-                                {entryIndex === 0 ? dailyTotal.toFixed(2) : ''}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        });
+                        return (
+                          <TableRow 
+                            key={entry.id} 
+                            className={cn(
+                              "hover:bg-muted/20",
+                              isWeekend && "bg-muted/30",
+                              isFirstDayOfWeek && index > 0 && "border-t-2 border-primary/20"
+                            )}
+                          >
+                            <TableCell className="text-center">
+                              <Checkbox
+                                checked={entry.approved}
+                                onCheckedChange={(checked) => 
+                                  updateEntry(entry.id, 'approved', checked)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {entry.weekday}
+                                {isFirstDayOfWeek && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Week {weekNumber}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{format(entry.date, 'MM/dd/yyyy')}</TableCell>
+                            <TableCell>
+                              <Input
+                                type="time"
+                                value={entry.timeIn}
+                                onChange={(e) => updateEntry(entry.id, 'timeIn', e.target.value)}
+                                className="w-full"
+                                disabled={isWeekend}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="time"
+                                value={entry.timeOut}
+                                onChange={(e) => updateEntry(entry.id, 'timeOut', e.target.value)}
+                                className="w-full"
+                                disabled={isWeekend}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Select 
+                                value={entry.payCode}
+                                onValueChange={(value) => updateEntry(entry.id, 'payCode', value)}
+                                disabled={isWeekend}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {payCodeOptions.map(code => (
+                                    <SelectItem key={code} value={code}>{code}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {entry.hours.toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Select 
+                                value={entry.department}
+                                onValueChange={(value) => updateEntry(entry.id, 'department', value)}
+                                disabled={isWeekend}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {departmentOptions.map(dept => (
+                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-semibold">
+                              {entry.hours.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        );
                       })}
                     </TableBody>
                   </Table>
@@ -458,7 +595,7 @@ export default function IndividualTimecardMinimal() {
 
               <TabsContent value="totals" className="m-0 p-6">
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Weekly Summary by Pay Code</h3>
+                  <h3 className="text-lg font-semibold">Bi-Weekly Summary by Pay Code</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Object.entries(totalsByPayCode).map(([payCode, hours]) => (
                       <Card key={payCode}>
@@ -474,11 +611,21 @@ export default function IndividualTimecardMinimal() {
                     ))}
                   </div>
                   <div className="mt-6 p-4 bg-muted rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold">Total Hours:</span>
-                      <span className="text-xl font-mono font-bold">
-                        {Object.values(totalsByPayCode).reduce((sum, hours) => sum + hours, 0).toFixed(2)} hrs
-                      </span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <span className="text-lg font-semibold">Total Hours:</span>
+                        <p className="text-xl font-mono font-bold">
+                          {Object.values(totalsByPayCode).reduce((sum, hours) => sum + hours, 0).toFixed(2)} hrs
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Pay Period:</span>
+                        <p className="font-medium">{getPeriodLabel()}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Period Type:</span>
+                        <p className="font-medium">Bi-weekly (14 days)</p>
+                      </div>
                     </div>
                   </div>
                 </div>
