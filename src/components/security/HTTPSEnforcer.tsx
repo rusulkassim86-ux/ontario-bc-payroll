@@ -16,9 +16,16 @@ export function HTTPSEnforcer() {
 export function setSecurityHeaders() {
   // This would typically be handled by the server, but we can also set some via JavaScript
   if (typeof document !== 'undefined') {
-    // Prevent the page from being embedded in frames
-    if (window.top !== window.self) {
-      window.top.location.href = window.self.location.href;
+    // Safer frame detection without causing SecurityError
+    try {
+      // Only attempt frame detection if we can safely access it
+      if (window.top !== window.self) {
+        // Log the attempt instead of redirecting (which causes SecurityError)
+        console.warn('Page loaded in frame - potential security concern');
+      }
+    } catch (e) {
+      // Silently handle cross-origin frame access errors
+      console.warn('Frame detection blocked by security policy');
     }
     
     // Add security-related event listeners
