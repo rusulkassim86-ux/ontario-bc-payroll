@@ -383,7 +383,19 @@ export default function Timesheets() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     console.log('Review button clicked - Full row object:', timesheet);
-                                    handleEmployeeClick(timesheet);
+                                    
+                                    // Try to find employee ID in order of preference
+                                    const employeeId = (timesheet as any).employeeId || (timesheet as any).associateId || (timesheet as any).empNo || (timesheet as any).id;
+                                    
+                                    if (employeeId) {
+                                      navigate(`/timecard/${employeeId}`);
+                                    } else {
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Error",
+                                        description: "Missing employee id in row data",
+                                      });
+                                    }
                                   }}
                                 >
                                   Review
