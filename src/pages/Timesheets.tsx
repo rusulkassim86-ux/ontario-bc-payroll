@@ -341,6 +341,7 @@ export default function Timesheets() {
                              return employeeId ? (
                                <Button 
                                  size="sm" 
+                                 className="bg-primary text-primary-foreground"
                                  onClick={(e) => {
                                    e.stopPropagation();
                                    navigate(`/timecard/${employeeId}`);
@@ -349,13 +350,20 @@ export default function Timesheets() {
                                  Open Timecard
                                </Button>
                              ) : (
-                               <Button 
-                                 size="sm" 
-                                 disabled
-                                 variant="outline"
-                               >
-                                 Missing ID
-                               </Button>
+                               <Tooltip>
+                                 <TooltipTrigger asChild>
+                                   <Button 
+                                     size="sm" 
+                                     disabled
+                                     variant="outline"
+                                   >
+                                     Open Timecard
+                                   </Button>
+                                 </TooltipTrigger>
+                                 <TooltipContent>
+                                   <p>Missing employee id</p>
+                                 </TooltipContent>
+                               </Tooltip>
                              );
                            })()}
                          </TableCell>
