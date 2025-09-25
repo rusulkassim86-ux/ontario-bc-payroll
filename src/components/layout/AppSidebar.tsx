@@ -26,6 +26,7 @@ const menuItems = [
 ];
 
 const securityItems = [
+  { title: "User Management", url: "/user-management", icon: Users },
   { title: "Security Center", url: "/security-center", icon: Shield },
   { title: "Backup & Restore", url: "/backup-restore", icon: Database },
 ];

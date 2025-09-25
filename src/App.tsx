@@ -9,6 +9,7 @@ import { AuthGuard } from "./components/auth/AuthGuard";
 import Dashboard from "./pages/Dashboard";
 import Company from "./pages/Company";
 import Employees from "./pages/Employees";
+import UserManagement from "./pages/UserManagement";
 import Timesheets from "./pages/Timesheets";
 import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
@@ -33,6 +34,7 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/company" element={<Company />} />
                 <Route path="/employees" element={<Employees />} />
+                <Route path="/user-management" element={<UserManagement />} />
                 <Route path="/timesheets" element={<Timesheets />} />
                 <Route path="/payroll" element={<Payroll />} />
                 <Route path="/reports" element={<Reports />} />
