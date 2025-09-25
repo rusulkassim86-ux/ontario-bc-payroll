@@ -3,9 +3,11 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, Calendar, AlertTriangle, Clock, TrendingUp, Building2, FileText } from "lucide-react";
+import { Users, DollarSign, Calendar, AlertTriangle, Clock, TrendingUp, Building2, FileText, UserCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   return (
     <div className="space-y-6">
       <PageHeader 
@@ -70,6 +72,14 @@ export default function Dashboard() {
               <Button className="w-full justify-start" variant="outline">
                 <Building2 className="w-4 h-4 mr-2" />
                 Company Settings
+              </Button>
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate("/timecard/EMP001")}
+              >
+                <UserCheck className="w-4 h-4 mr-2" />
+                Test Individual Timecard
               </Button>
             </CardContent>
           </Card>
