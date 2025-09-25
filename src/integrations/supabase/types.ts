@@ -958,8 +958,77 @@ export type Database = {
         }
         Relationships: []
       }
+      timesheet_approvals: {
+        Row: {
+          approval_note: string | null
+          approved_at: string
+          approved_by: string
+          client_ip: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          metadata: Json
+          pay_period_end: string
+          pay_period_start: string
+          selected_days: Json
+          total_ot_hours: number
+          total_reg_hours: number
+          total_sick_hours: number
+          total_stat_hours: number
+          total_vac_hours: number
+          updated_at: string
+        }
+        Insert: {
+          approval_note?: string | null
+          approved_at?: string
+          approved_by: string
+          client_ip?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          metadata?: Json
+          pay_period_end: string
+          pay_period_start: string
+          selected_days?: Json
+          total_ot_hours?: number
+          total_reg_hours?: number
+          total_sick_hours?: number
+          total_stat_hours?: number
+          total_vac_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          approval_note?: string | null
+          approved_at?: string
+          approved_by?: string
+          client_ip?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          metadata?: Json
+          pay_period_end?: string
+          pay_period_start?: string
+          selected_days?: Json
+          total_ot_hours?: number
+          total_reg_hours?: number
+          total_sick_hours?: number
+          total_stat_hours?: number
+          total_vac_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_approvals_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timesheets: {
         Row: {
+          approval_note: string | null
           approved_at: string | null
           approved_by: string | null
           created_at: string
@@ -969,14 +1038,18 @@ export type Database = {
           hours_regular: number
           hours_stat: number
           id: string
+          locked_at: string | null
           notes: string | null
           pay_calendar_id: string
+          pay_period_end: string | null
+          pay_period_start: string | null
           project_code: string | null
           status: string
           updated_at: string
           work_date: string
         }
         Insert: {
+          approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
@@ -986,14 +1059,18 @@ export type Database = {
           hours_regular?: number
           hours_stat?: number
           id?: string
+          locked_at?: string | null
           notes?: string | null
           pay_calendar_id: string
+          pay_period_end?: string | null
+          pay_period_start?: string | null
           project_code?: string | null
           status?: string
           updated_at?: string
           work_date: string
         }
         Update: {
+          approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
@@ -1003,8 +1080,11 @@ export type Database = {
           hours_regular?: number
           hours_stat?: number
           id?: string
+          locked_at?: string | null
           notes?: string | null
           pay_calendar_id?: string
+          pay_period_end?: string | null
+          pay_period_start?: string | null
           project_code?: string | null
           status?: string
           updated_at?: string
@@ -1175,6 +1255,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_timesheet: {
+        Args: {
+          p_approval_note: string
+          p_employee_id: string
+          p_end_date: string
+          p_selected_days: Json
+          p_start_date: string
+          p_totals: Json
+        }
+        Returns: string
+      }
       create_audit_log: {
         Args: {
           p_action: string
