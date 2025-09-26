@@ -34,11 +34,11 @@ export function SignIn() {
     setError('');
 
     try {
-      const result = await signIn(email, password, twoFactorCode);
+      const result = await signIn(email, password);
       
-      if (result.success) {
+      if (!result.error) {
         navigate(from, { replace: true });
-      } else if (result.requiresTwoFactor) {
+      } else if (result.error?.includes('two-factor')) {
         setRequiresTwoFactor(true);
       } else {
         setError(result.error || 'Login failed');

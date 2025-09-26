@@ -37,7 +37,7 @@ interface PortalLayoutProps {
 }
 
 export function PortalLayout({ children }: PortalLayoutProps) {
-  const { user, signOut, isManager } = usePortalAuth();
+  const { user, profile, signOut, isManager } = usePortalAuth();
   const location = useLocation();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showPWAPrompt, setShowPWAPrompt] = useState(false);
@@ -177,16 +177,16 @@ export function PortalLayout({ children }: PortalLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
                   <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
-                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                    {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                   </div>
-                  <span className="hidden sm:block">{user?.firstName} {user?.lastName}</span>
+                  <span className="hidden sm:block">{profile?.first_name} {profile?.last_name}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <div className="px-2 py-1.5 text-sm">
-                  <div className="font-medium">{user?.firstName} {user?.lastName}</div>
-                  <div className="text-muted-foreground">{user?.email}</div>
-                  <Badge variant="outline" className="mt-1 text-xs">{user?.role}</Badge>
+                  <div className="font-medium">{profile?.first_name} {profile?.last_name}</div>
+                  <div className="text-muted-foreground">{profile?.email}</div>
+                  <Badge variant="outline" className="mt-1 text-xs">{profile?.role}</Badge>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>

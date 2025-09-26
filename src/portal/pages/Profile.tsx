@@ -21,14 +21,14 @@ import {
 } from 'lucide-react';
 
 export function Profile() {
-  const { user } = usePortalAuth();
+  const { user, profile } = usePortalAuth();
   const [showBankingDetails, setShowBankingDetails] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   // Mock profile data
-  const profile = {
-    firstName: user?.firstName || 'John',
-    lastName: user?.lastName || 'Smith',
+  const mockProfile = {
+    firstName: profile?.first_name || 'John',
+    lastName: profile?.last_name || 'Smith',
     email: user?.email || 'john.smith@besttheratronics.ca',
     phone: '(416) 555-0123',
     address: {
@@ -48,7 +48,7 @@ export function Profile() {
       provincialClaim: 11141,
       additionalTax: 0
     },
-    twoFactorEnabled: user?.twoFactorEnabled || false
+    twoFactorEnabled: false // Will be connected to actual profile data later
   };
 
   return (
@@ -84,7 +84,7 @@ export function Profile() {
                 <Label htmlFor="firstName">First Name</Label>
                 <Input
                   id="firstName"
-                  value={profile.firstName}
+                  value={mockProfile.firstName}
                   disabled={!isEditing}
                 />
               </div>
@@ -92,7 +92,7 @@ export function Profile() {
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input
                   id="lastName"
-                  value={profile.lastName}
+                  value={mockProfile.lastName}
                   disabled={!isEditing}
                 />
               </div>
@@ -103,7 +103,7 @@ export function Profile() {
               <Input
                 id="email"
                 type="email"
-                value={profile.email}
+                value={mockProfile.email}
                 disabled
               />
               <p className="text-xs text-muted-foreground">
@@ -115,7 +115,7 @@ export function Profile() {
               <Label htmlFor="phone">Phone Number</Label>
               <Input
                 id="phone"
-                value={profile.phone}
+                value={mockProfile.phone}
                 disabled={!isEditing}
               />
             </div>
@@ -136,7 +136,7 @@ export function Profile() {
               <Label htmlFor="street">Street Address</Label>
               <Input
                 id="street"
-                value={profile.address.street}
+                value={mockProfile.address.street}
                 disabled={!isEditing}
               />
             </div>
@@ -146,7 +146,7 @@ export function Profile() {
                 <Label htmlFor="city">City</Label>
                 <Input
                   id="city"
-                  value={profile.address.city}
+                  value={mockProfile.address.city}
                   disabled={!isEditing}
                 />
               </div>
@@ -154,7 +154,7 @@ export function Profile() {
                 <Label htmlFor="province">Province</Label>
                 <Input
                   id="province"
-                  value={profile.address.province}
+                  value={mockProfile.address.province}
                   disabled={!isEditing}
                 />
               </div>
@@ -164,7 +164,7 @@ export function Profile() {
               <Label htmlFor="postalCode">Postal Code</Label>
               <Input
                 id="postalCode"
-                value={profile.address.postalCode}
+                value={mockProfile.address.postalCode}
                 disabled={!isEditing}
                 className="uppercase"
               />
@@ -192,7 +192,7 @@ export function Profile() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Label>Account Details</Label>
-                {profile.banking.verified && (
+                {mockProfile.banking.verified && (
                   <Badge variant="outline" className="text-green-600">
                     <CheckCircle className="mr-1 h-3 w-3" />
                     Verified
@@ -215,7 +215,7 @@ export function Profile() {
                     <Label htmlFor="institution">Institution Number</Label>
                     <Input
                       id="institution"
-                      value={profile.banking.institution}
+                      value={mockProfile.banking.institution}
                       disabled={!isEditing}
                     />
                   </div>
@@ -223,7 +223,7 @@ export function Profile() {
                     <Label htmlFor="transit">Transit Number</Label>
                     <Input
                       id="transit"
-                      value={profile.banking.transit}
+                      value={mockProfile.banking.transit}
                       disabled={!isEditing}
                     />
                   </div>
@@ -263,11 +263,11 @@ export function Profile() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={profile.twoFactorEnabled ? "default" : "secondary"}>
-                  {profile.twoFactorEnabled ? "Enabled" : "Disabled"}
+                <Badge variant={mockProfile.twoFactorEnabled ? "default" : "secondary"}>
+                  {mockProfile.twoFactorEnabled ? "Enabled" : "Disabled"}
                 </Badge>
                 <Button variant="outline" size="sm">
-                  {profile.twoFactorEnabled ? "Disable" : "Enable"}
+                  {mockProfile.twoFactorEnabled ? "Disable" : "Enable"}
                 </Button>
               </div>
             </div>
@@ -302,7 +302,7 @@ export function Profile() {
                   <Label htmlFor="federalClaim">Basic Personal Amount</Label>
                   <Input
                     id="federalClaim"
-                    value={`$${profile.taxInfo.federalClaim.toLocaleString('en-CA')}`}
+                    value={`$${mockProfile.taxInfo.federalClaim.toLocaleString('en-CA')}`}
                     disabled={!isEditing}
                   />
                 </div>
@@ -314,7 +314,7 @@ export function Profile() {
                   <Label htmlFor="provincialClaim">Basic Personal Amount</Label>
                   <Input
                     id="provincialClaim"
-                    value={`$${profile.taxInfo.provincialClaim.toLocaleString('en-CA')}`}
+                    value={`$${mockProfile.taxInfo.provincialClaim.toLocaleString('en-CA')}`}
                     disabled={!isEditing}
                   />
                 </div>
@@ -324,7 +324,7 @@ export function Profile() {
                 <Label htmlFor="additionalTax">Additional Tax per Pay Period</Label>
                 <Input
                   id="additionalTax"
-                  value={`$${profile.taxInfo.additionalTax.toFixed(2)}`}
+                  value={`$${mockProfile.taxInfo.additionalTax.toFixed(2)}`}
                   disabled={!isEditing}
                 />
                 <p className="text-xs text-muted-foreground">

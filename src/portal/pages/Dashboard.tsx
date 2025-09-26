@@ -17,7 +17,7 @@ import {
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
-  const { user, isManager } = usePortalAuth();
+  const { user, profile, isManager } = usePortalAuth();
 
   // Mock data - replace with actual API calls
   const nextPayDate = "December 15, 2024";
@@ -31,7 +31,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {user?.firstName}!
+            Welcome back, {profile?.first_name}!
           </h1>
           <p className="text-muted-foreground">
             {new Date().toLocaleDateString('en-CA', { 
