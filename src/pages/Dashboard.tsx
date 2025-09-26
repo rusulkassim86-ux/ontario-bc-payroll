@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, DollarSign, Calendar, AlertTriangle, Clock, TrendingUp, Building2, FileText, UserCheck, Calculator, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { CRARemittanceWidget } from "@/components/dashboard/CRARemittanceWidget";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Quick Actions */}
           <Card className="shadow-card">
             <CardHeader>
@@ -99,6 +100,9 @@ export default function Dashboard() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* CRA Remittances Widget */}
+          <CRARemittanceWidget />
 
           {/* Recent Activity */}
           <Card className="shadow-card lg:col-span-2">

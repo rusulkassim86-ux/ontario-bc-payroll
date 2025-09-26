@@ -10,6 +10,7 @@ import { SignIn } from "./pages/SignIn";
 import { Dashboard } from "./pages/Dashboard";
 import { MyTime } from "./pages/MyTime";
 import { MyPay } from "./pages/MyPay";
+import { MyT4 } from "./pages/MyT4";
 import { TimeOff } from "./pages/TimeOff";
 import { Profile } from "./pages/Profile";
 import { Documents } from "./pages/Documents";
@@ -50,6 +51,7 @@ export function PortalApp() {
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/time" element={<MyTime />} />
                       <Route path="/pay" element={<MyPay />} />
+                      <Route path="/t4" element={<MyT4 />} />
                       <Route path="/timeoff" element={<TimeOff />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/documents" element={<Documents />} />
