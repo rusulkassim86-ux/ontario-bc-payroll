@@ -18,6 +18,7 @@ import { PayCode } from '@/hooks/usePayCodes';
 import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
 import { ManualPunchDialog } from '@/components/punch/ManualPunchDialog';
 import { usePunches } from '@/hooks/usePunches';
+import { useDeviceMapping } from '@/hooks/useDeviceMapping';
 import * as XLSX from 'xlsx';
 import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, isMonday, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +64,7 @@ export default function IndividualTimecardMinimal() {
   const { employee: employeeData, loading: employeeLoading, error: employeeError } = useEmployee(employeeId || '');
   const { employees, loading: employeesLoading } = usePayrollData();
   const { payPeriod, loading: payPeriodLoading } = useEmployeePayPeriod(employeeData?.id || '');
+  const { mappings: deviceMappings, loading: mappingsLoading } = useDeviceMapping(employeeData?.id);
   const [timesheets, setTimesheets] = useState<any[]>([]);
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [payCodeMap, setPayCodeMap] = useState<Record<string, PayCode>>({});
@@ -232,10 +234,33 @@ export default function IndividualTimecardMinimal() {
     periodDates.end
   );
 
-  // Regenerate entries when period changes
+  // Merge punch data with timecard entries
+  const mergeEntriesWithPunches = (timecardEntries: TimecardEntry[]): TimecardEntry[] => {
+    return timecardEntries.map(entry => {
+      const dateStr = format(entry.date, 'yyyy-MM-dd');
+      const punchPair = punchPairs.find(pair => pair.date === dateStr);
+      
+      if (punchPair) {
+        return {
+          ...entry,
+          timeIn: punchPair.timeIn || entry.timeIn,
+          timeOut: punchPair.timeOut || entry.timeOut,
+          hours: punchPair.hours || entry.hours,
+          // Mark as complete if we have both in and out punches
+          approved: punchPair.isComplete ? entry.approved : false
+        };
+      }
+      
+      return entry;
+    });
+  };
+
+  // Regenerate entries when period changes and merge with punch data
   useEffect(() => {
-    setEntries(generateBiWeeklyEntries());
-  }, [periodDates]);
+    const baseEntries = generateBiWeeklyEntries();
+    const mergedEntries = mergeEntriesWithPunches(baseEntries);
+    setEntries(mergedEntries);
+  }, [periodDates, punchPairs]);
 
   // Period navigation functions
   const navigateToPreviousPeriod = () => {
@@ -566,8 +591,19 @@ export default function IndividualTimecardMinimal() {
   const periodLabel = getPeriodLabel();
 
   // Show loading or redirect for invalid employee
-  if (validatingEmployee) {
-    return <div>Validating employee...</div>;
+  if (validatingEmployee || employeeLoading || punchesLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Individual Timecard" description="Loading employee data..." />
+        <div className="flex justify-center p-8">
+          <div className="text-muted-foreground">
+            Loading timecard data
+            {punchesLoading && " and punch records"}
+            ...
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -847,20 +883,52 @@ export default function IndividualTimecardMinimal() {
                                   {format(entry.date, 'MM/dd/yyyy')}
                                 </TableCell>
                                 <TableCell>
-                                  <Input
-                                    type="time"
-                                    value={entry.timeIn}
-                                    onChange={(e) => updateEntry(entry.id, 'timeIn', e.target.value)}
-                                    className="w-24"
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="time"
+                                      value={entry.timeIn}
+                                      onChange={(e) => updateEntry(entry.id, 'timeIn', e.target.value)}
+                                      className="w-24"
+                                    />
+                                    {punchPairs.find(p => p.date === format(entry.date, 'yyyy-MM-dd'))?.timeIn && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <Badge variant="outline" className="text-xs bg-success/10 text-success">
+                                              P
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Punch data available
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
-                                  <Input
-                                    type="time"
-                                    value={entry.timeOut}
-                                    onChange={(e) => updateEntry(entry.id, 'timeOut', e.target.value)}
-                                    className="w-24"
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="time"
+                                      value={entry.timeOut}
+                                      onChange={(e) => updateEntry(entry.id, 'timeOut', e.target.value)}
+                                      className="w-24"
+                                    />
+                                    {punchPairs.find(p => p.date === format(entry.date, 'yyyy-MM-dd'))?.timeOut && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <Badge variant="outline" className="text-xs bg-success/10 text-success">
+                                              P
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Punch data available
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="w-48">
