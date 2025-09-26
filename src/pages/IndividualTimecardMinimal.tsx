@@ -52,6 +52,9 @@ export default function IndividualTimecardMinimal() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  
+  // Debug logging for route param verification
+  console.info('[timecard] employeeId=', employeeId);
   const { employees, loading: employeesLoading } = usePayrollData();
   const { payPeriod, loading: payPeriodLoading } = useEmployeePayPeriod(employeeId || '');
   const [timesheets, setTimesheets] = useState<any[]>([]);
@@ -120,28 +123,29 @@ export default function IndividualTimecardMinimal() {
 
   // Validate employee ID and handle invalid IDs
   useEffect(() => {
-    if (!employeeId) {
+    if (!employeeId || employeeId.trim() === "") {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No employee ID provided",
+        title: "Employee Not Found",
+        description: "Employee ID is missing from the URL",
       });
       navigate("/timesheets");
       return;
     }
 
-    // Mock validation - in real app, check against employees table
-    const isValidEmployee = /^[A-Z0-9]+$/.test(employeeId) && employeeId.length >= 3;
-    
-    if (!isValidEmployee) {
+    // Additional validation for invalid IDs
+    if (employeeId.length < 3) {
       toast({
         variant: "destructive",
         title: "Employee Not Found",
-        description: `Invalid employee ID: ${employeeId}`,
+        description: "Invalid employee ID format",
       });
       navigate("/timesheets");
       return;
     }
+
+    // Log successful validation
+    console.log("✅ Valid Employee ID from URL:", employeeId);
 
     // Additional check for demo - warn about unknown employee but allow access
     const knownEmployees = ['EMP001', 'EMP002', 'EMP003', 'TEST001'];

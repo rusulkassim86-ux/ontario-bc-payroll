@@ -27,6 +27,27 @@ import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 
 const queryClient = new QueryClient();
 
+// Debug: Log all registered routes for verification
+console.table([
+  { path: "/", component: "Dashboard" },
+  { path: "/company", component: "Company" },
+  { path: "/employees", component: "Employees" },
+  { path: "/user-management", component: "UserManagement" },
+  { path: "/timesheets", component: "Timesheets" },
+  { path: "/timecard/:employeeId", component: "IndividualTimecardMinimal" },
+  { path: "/payroll", component: "Payroll" },
+  { path: "/pay-codes-master", component: "PayCodesMasterPage" },
+  { path: "/reports", component: "Reports" },
+  { path: "/security-center", component: "SecurityCenter" },
+  { path: "/backup-restore", component: "BackupRestore" },
+  { path: "/device-mapping", component: "DeviceMapping" },
+  { path: "/punch-feed", component: "PunchFeed" },
+  { path: "/devices", component: "Devices" },
+  { path: "/punch-config", component: "PunchConfig" },
+  { path: "/dev/routes", component: "DevRoutes" },
+  { path: "*", component: "NotFound" }
+]);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
