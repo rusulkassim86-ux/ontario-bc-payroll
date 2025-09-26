@@ -331,6 +331,123 @@ export type Database = {
         }
         Relationships: []
       }
+      cra_filing_records: {
+        Row: {
+          company_id: string
+          cra_confirmation_number: string | null
+          created_at: string
+          file_format: string
+          file_path: string | null
+          filed_at: string
+          filed_by: string | null
+          filing_type: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          submission_status: string
+          tax_year: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          cra_confirmation_number?: string | null
+          created_at?: string
+          file_format: string
+          file_path?: string | null
+          filed_at?: string
+          filed_by?: string | null
+          filing_type: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          submission_status?: string
+          tax_year?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          cra_confirmation_number?: string | null
+          created_at?: string
+          file_format?: string
+          file_path?: string | null
+          filed_at?: string
+          filed_by?: string | null
+          filing_type?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          submission_status?: string
+          tax_year?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cra_remittance_reports: {
+        Row: {
+          company_id: string
+          created_at: string
+          due_date: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          report_period_end: string
+          report_period_start: string
+          report_type: string
+          status: string
+          submitted_at: string | null
+          total_cpp_employee: number
+          total_cpp_employer: number
+          total_ei_employee: number
+          total_ei_employer: number
+          total_federal_tax: number
+          total_provincial_tax: number
+          total_remittance_due: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          due_date: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          report_period_end: string
+          report_period_start: string
+          report_type: string
+          status?: string
+          submitted_at?: string | null
+          total_cpp_employee?: number
+          total_cpp_employer?: number
+          total_ei_employee?: number
+          total_ei_employer?: number
+          total_federal_tax?: number
+          total_provincial_tax?: number
+          total_remittance_due?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          due_date?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          report_period_end?: string
+          report_period_start?: string
+          report_type?: string
+          status?: string
+          submitted_at?: string | null
+          total_cpp_employee?: number
+          total_cpp_employer?: number
+          total_ei_employee?: number
+          total_ei_employer?: number
+          total_federal_tax?: number
+          total_provincial_tax?: number
+          total_remittance_due?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deduction_codes: {
         Row: {
           calc_type: string
@@ -1602,6 +1719,150 @@ export type Database = {
         }
         Relationships: []
       }
+      t4_slips: {
+        Row: {
+          amendment_reason: string | null
+          box_14_employment_income: number
+          box_16_cpp_contributions: number
+          box_17_cpp_pensionable_earnings: number
+          box_18_ei_premiums: number
+          box_19_ei_insurable_earnings: number
+          box_22_income_tax_deducted: number
+          box_24_ei_insurable_earnings: number
+          box_26_cpp_pensionable_earnings: number
+          box_44_union_dues: number
+          box_46_charitable_donations: number
+          box_50_rpps: number
+          company_id: string
+          created_at: string
+          employee_id: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          issued_at: string | null
+          original_slip_id: string | null
+          other_boxes: Json
+          status: string
+          tax_year: number
+          updated_at: string
+        }
+        Insert: {
+          amendment_reason?: string | null
+          box_14_employment_income?: number
+          box_16_cpp_contributions?: number
+          box_17_cpp_pensionable_earnings?: number
+          box_18_ei_premiums?: number
+          box_19_ei_insurable_earnings?: number
+          box_22_income_tax_deducted?: number
+          box_24_ei_insurable_earnings?: number
+          box_26_cpp_pensionable_earnings?: number
+          box_44_union_dues?: number
+          box_46_charitable_donations?: number
+          box_50_rpps?: number
+          company_id: string
+          created_at?: string
+          employee_id: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          original_slip_id?: string | null
+          other_boxes?: Json
+          status?: string
+          tax_year: number
+          updated_at?: string
+        }
+        Update: {
+          amendment_reason?: string | null
+          box_14_employment_income?: number
+          box_16_cpp_contributions?: number
+          box_17_cpp_pensionable_earnings?: number
+          box_18_ei_premiums?: number
+          box_19_ei_insurable_earnings?: number
+          box_22_income_tax_deducted?: number
+          box_24_ei_insurable_earnings?: number
+          box_26_cpp_pensionable_earnings?: number
+          box_44_union_dues?: number
+          box_46_charitable_donations?: number
+          box_50_rpps?: number
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          original_slip_id?: string | null
+          other_boxes?: Json
+          status?: string
+          tax_year?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      t4a_slips: {
+        Row: {
+          amendment_reason: string | null
+          box_20_self_employed_commissions: number
+          box_22_income_tax_deducted: number
+          box_48_fees_services: number
+          company_id: string
+          created_at: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          issued_at: string | null
+          original_slip_id: string | null
+          other_boxes: Json
+          recipient_address: Json
+          recipient_name: string
+          recipient_sin: string | null
+          status: string
+          tax_year: number
+          updated_at: string
+        }
+        Insert: {
+          amendment_reason?: string | null
+          box_20_self_employed_commissions?: number
+          box_22_income_tax_deducted?: number
+          box_48_fees_services?: number
+          company_id: string
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          original_slip_id?: string | null
+          other_boxes?: Json
+          recipient_address?: Json
+          recipient_name: string
+          recipient_sin?: string | null
+          status?: string
+          tax_year: number
+          updated_at?: string
+        }
+        Update: {
+          amendment_reason?: string | null
+          box_20_self_employed_commissions?: number
+          box_22_income_tax_deducted?: number
+          box_48_fees_services?: number
+          company_id?: string
+          created_at?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          original_slip_id?: string | null
+          other_boxes?: Json
+          recipient_address?: Json
+          recipient_name?: string
+          recipient_sin?: string | null
+          status?: string
+          tax_year?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tax_rules: {
         Row: {
           basic_exemption: number
@@ -1961,6 +2222,15 @@ export type Database = {
           p_entity_id: string
           p_entity_type: string
           p_metadata?: Json
+        }
+        Returns: string
+      }
+      generate_cra_remittance_report: {
+        Args: {
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+          p_report_type: string
         }
         Returns: string
       }
