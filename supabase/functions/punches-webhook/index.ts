@@ -1,22 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-
-// Helper function to create HMAC signature using Web Crypto API
-async function createHmacSignature(secret: string, message: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
-  return Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,254 +7,333 @@ const corsHeaders = {
 }
 
 interface PunchWebhookPayload {
-  device_serial: string
-  employee_id?: string
-  badge_id: string
-  punch_at: string // ISO timestamp
-  direction: 'IN' | 'OUT'
-  method: 'finger' | 'card' | 'pin'
-  raw_data?: any
+  deviceSerial: string;
+  records: Array<{
+    badgeId: string;
+    timestamp: string;
+    direction: 'IN' | 'OUT' | 'I' | 'O';
+  }>;
 }
 
-async function verifySignature(
-  body: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  try {
-    const expectedSignature = await createHmacSignature(secret, body)
-    return signature === `sha256=${expectedSignature}`
-  } catch (error) {
-    console.error('Signature verification error:', error)
-    return false
-  }
+// HMAC signature verification
+async function createHmacSignature(secret: string, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-async function generateDedupeHash(
-  deviceSerial: string,
-  badgeId: string,
-  punchAt: string,
-  direction: string
-): Promise<string> {
-  const data = `${deviceSerial}|${badgeId}|${punchAt}|${direction}`
-  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data))
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+async function verifySignature(body: string, signature: string, secret: string): Promise<boolean> {
+  const expectedSignature = await createHmacSignature(secret, body);
+  return signature === expectedSignature;
+}
+
+// Generate deduplication hash
+async function generateDedupeHash(deviceSerial: string, badgeId: string, punchAt: string, direction: string): Promise<string> {
+  const data = `${deviceSerial}-${badgeId}-${punchAt}-${direction}`;
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { 
       status: 405, 
       headers: corsHeaders 
-    })
+    });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get raw body for signature verification
-    const rawBody = await req.text()
-    const body: PunchWebhookPayload = JSON.parse(rawBody)
-    
-    console.log('Received punch webhook:', body)
+    // Parse request body
+    const body = await req.text();
+    const payload: PunchWebhookPayload = JSON.parse(body);
+    console.log('Received punch webhook:', payload);
 
-    // Validate required fields
-    if (!body.device_serial || !body.badge_id || !body.punch_at || !body.direction) {
-      return new Response('Missing required fields', { 
-        status: 400, 
-        headers: corsHeaders 
-      })
+    // Validate payload
+    if (!payload.deviceSerial || !payload.records || !Array.isArray(payload.records)) {
+      return new Response(JSON.stringify({
+        error: 'Invalid payload format',
+        message: 'Missing required fields: deviceSerial, records'
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    // Get or create device
-    let { data: device, error: deviceError } = await supabase
+    // Look up device and update heartbeat
+    const { data: device, error: deviceError } = await supabase
       .from('devices')
       .select('*')
-      .eq('serial_number', body.device_serial)
-      .single()
+      .eq('serial_number', payload.deviceSerial)
+      .single();
 
-    if (deviceError && deviceError.code !== 'PGRST116') {
-      console.error('Device lookup error:', deviceError)
-      return new Response('Database error', { 
-        status: 500, 
-        headers: corsHeaders 
-      })
-    }
+    let deviceCompanyId = device?.company_id;
+    
+    if (deviceError || !device) {
+      // Create new device if it doesn't exist
+      const { data: companies } = await supabase
+        .from('companies')
+        .select('id')
+        .limit(1);
 
-    if (!device) {
-      // Create device if it doesn't exist
-      const { data: newDevice, error: createError } = await supabase
+      if (!companies || companies.length === 0) {
+        return new Response(JSON.stringify({
+          error: 'No company found',
+          message: 'Cannot create device without a company'
+        }), {
+          status: 422,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      deviceCompanyId = companies[0].id;
+      
+      const { data: newDevice } = await supabase
         .from('devices')
         .insert({
-          serial_number: body.device_serial,
-          model: 'Unknown',
-          location: 'Auto-created',
-          status: 'active',
-          company_id: '00000000-0000-0000-0000-000000000001', // Will be properly set via company mapping
+          name: `Auto-created: ${payload.deviceSerial}`,
+          serial_number: payload.deviceSerial,
+          location: 'Unknown',
+          company_id: deviceCompanyId,
           last_heartbeat_at: new Date().toISOString()
         })
         .select()
-        .single()
+        .single();
 
-      if (createError) {
-        console.error('Device creation error:', createError)
-        return new Response('Failed to create device', { 
-          status: 500, 
-          headers: corsHeaders 
-        })
-      }
-      device = newDevice
+      console.log('Created new device:', newDevice);
     } else {
-      // Update heartbeat
+      // Update device heartbeat
       await supabase
         .from('devices')
         .update({ last_heartbeat_at: new Date().toISOString() })
-        .eq('id', device.id)
+        .eq('id', device.id);
     }
 
-    // Get punch configuration for signature verification
-    const { data: config } = await supabase
+    // Get punch configuration for webhook secret
+    const { data: punchConfig } = await supabase
       .from('punch_config')
-      .select('webhook_secret, webhook_enabled')
-      .eq('company_id', device.company_id)
-      .single()
+      .select('webhook_secret, duplicate_window_seconds')
+      .limit(1)
+      .single();
 
-    // Verify signature if webhook secret is configured
-    if (config?.webhook_secret) {
-      const signature = req.headers.get('x-signature') || req.headers.get('x-hub-signature-256')
-      if (!signature) {
-        return new Response('Missing signature', { 
-          status: 401, 
-          headers: corsHeaders 
-        })
-      }
-
-      const isValid = await verifySignature(rawBody, signature, config.webhook_secret)
+    // Verify signature if provided
+    const signature = req.headers.get('x-signature');
+    if (signature && punchConfig?.webhook_secret) {
+      const isValid = await verifySignature(body, signature, punchConfig.webhook_secret);
       if (!isValid) {
-        console.error('Invalid signature')
-        return new Response('Invalid signature', { 
-          status: 401, 
-          headers: corsHeaders 
-        })
-      }
-    }
-
-    // Map badge to employee
-    const { data: mapping } = await supabase
-      .from('device_employees')
-      .select('employee_id')
-      .eq('device_id', device.id)
-      .eq('badge_id', body.badge_id)
-      .eq('active', true)
-      .single()
-
-    let employeeId = body.employee_id || mapping?.employee_id
-
-    if (!employeeId) {
-      // Try to find employee by badge_id in employees table (fallback)
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('employee_number', body.badge_id)
-        .single()
-      
-      employeeId = employee?.id
-    }
-
-    if (!employeeId) {
-      console.error(`No employee mapping found for badge ${body.badge_id} on device ${body.device_serial}`)
-      return new Response('Employee not found for badge', { 
-        status: 404, 
-        headers: corsHeaders 
-      })
-    }
-
-    // Generate dedupe hash
-    const dedupeHash = await generateDedupeHash(
-      body.device_serial,
-      body.badge_id,
-      body.punch_at,
-      body.direction
-    )
-
-    // Insert punch (will fail if duplicate due to unique constraint)
-    const { data: punch, error: punchError } = await supabase
-      .from('punches')
-      .insert({
-        device_id: device.id,
-        employee_id: employeeId,
-        badge_id: body.badge_id,
-        punch_at: body.punch_at,
-        direction: body.direction,
-        method: body.method,
-        source: 'live',
-        raw_payload: body.raw_data || body,
-        dedupe_hash: dedupeHash
-      })
-      .select()
-      .single()
-
-    if (punchError) {
-      if (punchError.code === '23505') { // Unique constraint violation
-        console.log('Duplicate punch ignored:', dedupeHash)
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: 'Duplicate punch ignored',
-          dedupe_hash: dedupeHash 
+        return new Response(JSON.stringify({
+          error: 'Invalid signature',
+          message: 'Webhook signature verification failed'
         }), {
-          status: 200,
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        });
       }
-      
-      console.error('Punch insert error:', punchError)
-      return new Response('Failed to insert punch', { 
-        status: 500, 
-        headers: corsHeaders 
-      })
     }
 
-    // Log audit trail
-    await supabase
-      .from('audit_logs')
-      .insert({
-        action: 'PUNCH_RECEIVED',
-        entity_type: 'punch',
-        entity_id: punch.id,
-        metadata: {
-          device_serial: body.device_serial,
-          badge_id: body.badge_id,
-          direction: body.direction,
-          method: body.method,
-          source: 'webhook'
+    const results = [];
+    const duplicateWindow = punchConfig?.duplicate_window_seconds || 60;
+
+    // Process each punch record
+    for (const record of payload.records) {
+      try {
+        // Normalize direction
+        let direction: 'IN' | 'OUT';
+        if (record.direction === 'I' || record.direction === 'IN') {
+          direction = 'IN';
+        } else if (record.direction === 'O' || record.direction === 'OUT') {
+          direction = 'OUT';
+        } else {
+          results.push({
+            badgeId: record.badgeId,
+            status: 'error',
+            message: `Invalid direction: ${record.direction}`
+          });
+          continue;
         }
-      })
 
-    console.log('Punch processed successfully:', punch.id)
+        // Map badge ID to employee
+        const { data: mapping } = await supabase
+          .from('device_employees')
+          .select('employee_id, employees!inner(company_id)')
+          .eq('device_serial', payload.deviceSerial)
+          .eq('badge_id', record.badgeId)
+          .eq('active', true)
+          .single();
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      punch_id: punch.id,
-      dedupe_hash: dedupeHash 
+        if (!mapping) {
+          results.push({
+            badgeId: record.badgeId,
+            status: 'error',
+            message: 'Unknown badge ID - please map in Device Mapping'
+          });
+
+          // Log unknown badge
+          await supabase
+            .from('punch_import_logs')
+            .insert({
+              file_name: 'webhook',
+              import_type: 'webhook',
+              company_id: deviceCompanyId,
+              rows_total: 1,
+              rows_error: 1,
+              errors: [{
+                badgeId: record.badgeId,
+                error: 'Unknown badge ID',
+                deviceSerial: payload.deviceSerial
+              }],
+              status: 'completed'
+            });
+
+          continue;
+        }
+
+        // Generate deduplication hash
+        const dedupeHash = await generateDedupeHash(
+          payload.deviceSerial,
+          record.badgeId,
+          record.timestamp,
+          direction
+        );
+
+        // Check for recent duplicates within the window
+        const windowStart = new Date(new Date(record.timestamp).getTime() - (duplicateWindow * 1000));
+        const windowEnd = new Date(new Date(record.timestamp).getTime() + (duplicateWindow * 1000));
+
+        const { data: existingPunch } = await supabase
+          .from('punches')
+          .select('id')
+          .eq('device_serial', payload.deviceSerial)
+          .eq('badge_id', record.badgeId)
+          .eq('direction', direction)
+          .gte('punch_timestamp', windowStart.toISOString())
+          .lte('punch_timestamp', windowEnd.toISOString())
+          .limit(1)
+          .single();
+
+        if (existingPunch) {
+          results.push({
+            badgeId: record.badgeId,
+            status: 'duplicate',
+            message: `Duplicate punch within ${duplicateWindow}s window`
+          });
+          continue;
+        }
+
+        // Insert punch
+        const { data: punch, error: punchError } = await supabase
+          .from('punches')
+          .insert({
+            device_serial: payload.deviceSerial,
+            badge_id: record.badgeId,
+            employee_id: mapping.employee_id,
+            punch_timestamp: record.timestamp,
+            direction,
+            source: 'device',
+            raw_data: record,
+            deduped_hash: dedupeHash,
+            company_id: (mapping.employees as any)?.company_id
+          })
+          .select()
+          .single();
+
+        if (punchError) {
+          if (punchError.code === '23505') { // Unique constraint violation
+            results.push({
+              badgeId: record.badgeId,
+              status: 'duplicate',
+              message: 'Duplicate punch detected'
+            });
+          } else {
+            results.push({
+              badgeId: record.badgeId,
+              status: 'error',
+              message: `Database error: ${punchError.message}`
+            });
+          }
+          continue;
+        }
+
+        // Log successful punch
+        await supabase
+          .from('audit_logs')
+          .insert({
+            action: 'PUNCH_RECEIVED',
+            entity_type: 'punch',
+            entity_id: punch.id,
+            metadata: {
+              device_serial: payload.deviceSerial,
+              badge_id: record.badgeId,
+              direction,
+              timestamp: record.timestamp,
+              source: 'webhook'
+            }
+          });
+
+        results.push({
+          badgeId: record.badgeId,
+          status: 'success',
+          message: 'Punch recorded successfully',
+          punchId: punch.id
+        });
+
+      } catch (recordError: any) {
+        console.error('Error processing punch record:', recordError);
+        results.push({
+          badgeId: record.badgeId,
+          status: 'error',
+          message: `Processing error: ${recordError?.message || 'Unknown error'}`
+        });
+      }
+    }
+
+    // Return results
+    const successCount = results.filter(r => r.status === 'success').length;
+    const errorCount = results.filter(r => r.status === 'error').length;
+    const duplicateCount = results.filter(r => r.status === 'duplicate').length;
+
+    return new Response(JSON.stringify({
+      success: true,
+      summary: {
+        total: payload.records.length,
+        successful: successCount,
+        errors: errorCount,
+        duplicates: duplicateCount
+      },
+      results
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    });
 
-  } catch (error) {
-    console.error('Webhook processing error:', error)
-    return new Response('Internal server error', { 
-      status: 500, 
-      headers: corsHeaders 
-    })
+  } catch (error: any) {
+    console.error('Webhook processing error:', error);
+    return new Response(JSON.stringify({
+      error: 'Internal server error',
+      message: error?.message || 'Unknown error'
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
-})
+});

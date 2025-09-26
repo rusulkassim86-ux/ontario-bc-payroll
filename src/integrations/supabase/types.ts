@@ -384,6 +384,97 @@ export type Database = {
           },
         ]
       }
+      device_employees: {
+        Row: {
+          active: boolean
+          badge_id: string
+          created_at: string
+          device_serial: string
+          employee_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          badge_id: string
+          created_at?: string
+          device_serial: string
+          employee_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          badge_id?: string
+          created_at?: string
+          device_serial?: string
+          employee_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_employees_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devices: {
+        Row: {
+          allowed_ips: string[] | null
+          company_id: string
+          created_at: string
+          id: string
+          last_heartbeat_at: string | null
+          location: string
+          name: string
+          serial_number: string
+          status: string
+          timezone: string
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          allowed_ips?: string[] | null
+          company_id: string
+          created_at?: string
+          id?: string
+          last_heartbeat_at?: string | null
+          location: string
+          name: string
+          serial_number: string
+          status?: string
+          timezone?: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          allowed_ips?: string[] | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          last_heartbeat_at?: string | null
+          location?: string
+          name?: string
+          serial_number?: string
+          status?: string
+          timezone?: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           company_id: string
@@ -1301,6 +1392,182 @@ export type Database = {
           },
           {
             foreignKeyName: "profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      punch_config: {
+        Row: {
+          company_id: string
+          created_at: string
+          daily_max_hours: number
+          duplicate_window_seconds: number
+          grace_in_minutes: number
+          grace_out_minutes: number
+          id: string
+          lunch_auto_minutes: number
+          rounding_interval_minutes: number
+          updated_at: string
+          webhook_enabled: boolean
+          webhook_secret: string | null
+          worksite_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          daily_max_hours?: number
+          duplicate_window_seconds?: number
+          grace_in_minutes?: number
+          grace_out_minutes?: number
+          id?: string
+          lunch_auto_minutes?: number
+          rounding_interval_minutes?: number
+          updated_at?: string
+          webhook_enabled?: boolean
+          webhook_secret?: string | null
+          worksite_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          daily_max_hours?: number
+          duplicate_window_seconds?: number
+          grace_in_minutes?: number
+          grace_out_minutes?: number
+          id?: string
+          lunch_auto_minutes?: number
+          rounding_interval_minutes?: number
+          updated_at?: string
+          webhook_enabled?: boolean
+          webhook_secret?: string | null
+          worksite_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "punch_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "punch_config_worksite_id_fkey"
+            columns: ["worksite_id"]
+            isOneToOne: false
+            referencedRelation: "worksites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      punch_import_logs: {
+        Row: {
+          company_id: string
+          errors: Json | null
+          file_name: string
+          id: string
+          import_type: string
+          imported_at: string
+          imported_by: string | null
+          rows_error: number
+          rows_success: number
+          rows_total: number
+          status: string
+          summary: Json | null
+        }
+        Insert: {
+          company_id: string
+          errors?: Json | null
+          file_name: string
+          id?: string
+          import_type?: string
+          imported_at?: string
+          imported_by?: string | null
+          rows_error?: number
+          rows_success?: number
+          rows_total?: number
+          status?: string
+          summary?: Json | null
+        }
+        Update: {
+          company_id?: string
+          errors?: Json | null
+          file_name?: string
+          id?: string
+          import_type?: string
+          imported_at?: string
+          imported_by?: string | null
+          rows_error?: number
+          rows_success?: number
+          rows_total?: number
+          status?: string
+          summary?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "punch_import_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      punches: {
+        Row: {
+          badge_id: string
+          company_id: string | null
+          created_at: string
+          deduped_hash: string | null
+          device_serial: string
+          direction: string
+          employee_id: string | null
+          id: string
+          processed: boolean
+          punch_timestamp: string
+          raw_data: Json | null
+          source: string
+        }
+        Insert: {
+          badge_id: string
+          company_id?: string | null
+          created_at?: string
+          deduped_hash?: string | null
+          device_serial: string
+          direction: string
+          employee_id?: string | null
+          id?: string
+          processed?: boolean
+          punch_timestamp: string
+          raw_data?: Json | null
+          source?: string
+        }
+        Update: {
+          badge_id?: string
+          company_id?: string | null
+          created_at?: string
+          deduped_hash?: string | null
+          device_serial?: string
+          direction?: string
+          employee_id?: string | null
+          id?: string
+          processed?: boolean
+          punch_timestamp?: string
+          raw_data?: Json | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "punches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "punches_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"

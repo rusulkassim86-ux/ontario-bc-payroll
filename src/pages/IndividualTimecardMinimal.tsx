@@ -16,6 +16,8 @@ import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, Chevr
 import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
 import { PayCode } from '@/hooks/usePayCodes';
 import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
+import { ManualPunchDialog } from '@/components/punch/ManualPunchDialog';
+import { usePunches } from '@/hooks/usePunches';
 import * as XLSX from 'xlsx';
 import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, isMonday, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -229,6 +231,13 @@ export default function IndividualTimecardMinimal() {
   };
 
   const [entries, setEntries] = useState<TimecardEntry[]>(generateBiWeeklyEntries());
+  
+  // Add punch integration
+  const { punches, punchPairs, loading: punchesLoading, addManualPunch, deletePunch } = usePunches(
+    employeeId,
+    periodDates.start,
+    periodDates.end
+  );
 
   // Regenerate entries when period changes
   useEffect(() => {

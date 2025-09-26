@@ -58,25 +58,25 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <AppLayout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/company" element={<Company />} />
-                <Route path="/employees" element={<Employees />} />
-                <Route path="/user-management" element={<UserManagement />} />
-                <Route path="/timesheets" element={<Timesheets />} />
-                <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
-                <Route path="/payroll" element={<Payroll />} />
-                <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/security-center" element={<SecurityCenter />} />
-                <Route path="/backup-restore" element={<BackupRestore />} />
-                <Route path="/device-mapping" element={<DeviceMapping />} />
-                <Route path="/punch-feed" element={<PunchFeed />} />
-                <Route path="/devices" element={<Devices />} />
-                <Route path="/punch-config" element={<PunchConfig />} />
-                <Route path="/dev/routes" element={<DevRoutes />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/company" element={<Company />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/timesheets" element={<Timesheets />} />
+            <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
+            <Route path="/payroll" element={<Payroll />} />
+            <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/security-center" element={<SecurityCenter />} />
+            <Route path="/backup-restore" element={<BackupRestore />} />
+            <Route path="/device-mapping" element={<DeviceMapping />} />
+            <Route path="/punch-feed" element={<PunchFeed />} />
+            <Route path="/devices" element={<Devices />} />
+            <Route path="/punch-config" element={<PunchConfig />} />
+            <Route path="/dev/routes" element={<DevRoutes />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
             </AppLayout>
           </BrowserRouter>
         </AuthGuard>
