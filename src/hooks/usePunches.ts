@@ -26,7 +26,7 @@ interface PunchPair {
   isComplete: boolean;
 }
 
-export function usePunches(employeeId?: string, startDate?: Date, endDate?: Date) {
+export function usePunches(employeeIdentifier?: string, startDate?: Date, endDate?: Date) {
   const [punches, setPunches] = useState<Punch[]>([]);
   const [punchPairs, setPunchPairs] = useState<PunchPair[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ export function usePunches(employeeId?: string, startDate?: Date, endDate?: Date
   const { toast } = useToast();
 
   const fetchPunches = async () => {
-    if (!employeeId || !startDate || !endDate) {
+    if (!employeeIdentifier || !startDate || !endDate) {
       setLoading(false);
       return;
     }
@@ -43,10 +43,30 @@ export function usePunches(employeeId?: string, startDate?: Date, endDate?: Date
       setLoading(true);
       setError(null);
 
+      // First get the employee UUID from employee_number
+      const { data: employee, error: empError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('employee_number', employeeIdentifier)
+        .maybeSingle();
+
+      if (empError) {
+        console.error('Error fetching employee:', empError);
+        setError(empError.message);
+        return;
+      }
+
+      if (!employee) {
+        console.warn(`Employee not found for identifier: ${employeeIdentifier}`);
+        setPunches([]);
+        setPunchPairs([]);
+        return;
+      }
+
       const { data, error: fetchError } = await supabase
         .from('punches')
         .select('*')
-        .eq('employee_id', employeeId)
+        .eq('employee_id', employee.id)
         .gte('punch_timestamp', startDate.toISOString())
         .lte('punch_timestamp', endDate.toISOString())
         .order('punch_timestamp');
@@ -129,7 +149,20 @@ export function usePunches(employeeId?: string, startDate?: Date, endDate?: Date
     time: string,
     direction: 'IN' | 'OUT'
   ) => {
+    if (!employeeIdentifier) return;
+
     try {
+      // Get employee UUID first
+      const { data: employee, error: empError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('employee_number', employeeIdentifier)
+        .maybeSingle();
+
+      if (empError || !employee) {
+        throw new Error('Employee not found');
+      }
+
       const punchTimestamp = new Date(`${date.toISOString().split('T')[0]}T${time}:00`);
       
       const { data, error } = await supabase
@@ -137,7 +170,7 @@ export function usePunches(employeeId?: string, startDate?: Date, endDate?: Date
         .insert({
           device_serial: 'MANUAL',
           badge_id: 'MANUAL',
-          employee_id: employeeId,
+          employee_id: employee.id,
           punch_timestamp: punchTimestamp.toISOString(),
           direction,
           source: 'manual',
@@ -201,7 +234,7 @@ export function usePunches(employeeId?: string, startDate?: Date, endDate?: Date
 
   useEffect(() => {
     fetchPunches();
-  }, [employeeId, startDate, endDate]);
+  }, [employeeIdentifier, startDate, endDate]);
 
   return {
     punches,

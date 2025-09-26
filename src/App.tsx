@@ -12,6 +12,7 @@ import Employees from "./pages/Employees";
 import UserManagement from "./pages/UserManagement";
 import Timesheets from "./pages/Timesheets";
 import IndividualTimecardMinimal from "./pages/IndividualTimecardMinimal";
+import TimecardRedirect from "./pages/TimecardRedirect";
 import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
 import SecurityCenter from "./pages/SecurityCenter";
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/timesheets" element={<Timesheets />} />
             <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
+            <Route path="/timecard" element={<TimecardRedirect />} />
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
             <Route path="/reports" element={<Reports />} />

@@ -163,25 +163,42 @@ export function usePayCodes() {
   };
 }
 
-export function useEmployeePayCodes(employeeId: string) {
+export function useEmployeePayCodes(employeeIdentifier: string) {
   const [allowedPayCodes, setAllowedPayCodes] = useState<PayCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchEmployeePayCodes = async () => {
-    if (!employeeId) return;
+    if (!employeeIdentifier) return;
 
     try {
       setLoading(true);
       
       // First get employee details for worksite/union matching
-      const { data: employee, error: empError } = await supabase
+      let { data: employee, error: empError } = await supabase
         .from('employees')
-        .select('worksite_id, union_id, province_code')
-        .eq('id', employeeId)
-        .single();
+        .select('id, worksite_id, union_id, province_code')
+        .eq('employee_number', employeeIdentifier)
+        .maybeSingle();
+
+      // If not found by employee_number, try by UUID
+      if (!employee && !empError) {
+        const result = await supabase
+          .from('employees')
+          .select('id, worksite_id, union_id, province_code')
+          .eq('id', employeeIdentifier)
+          .maybeSingle();
+        
+        employee = result.data;
+        empError = result.error;
+      }
 
       if (empError) throw empError;
+
+      if (empError || !employee) {
+        setAllowedPayCodes([]);
+        return;
+      }
 
       // Get explicitly allowed pay codes
       const { data: explicitCodes, error: explicitError } = await supabase
@@ -189,7 +206,7 @@ export function useEmployeePayCodes(employeeId: string) {
         .select(`
           pay_code:pay_codes (*)
         `)
-        .eq('employee_id', employeeId)
+        .eq('employee_id', employee.id)
         .eq('active', true)
         .lte('effective_from', new Date().toISOString())
         .or(`effective_to.is.null,effective_to.gte.${new Date().toISOString()}`);
@@ -247,7 +264,7 @@ export function useEmployeePayCodes(employeeId: string) {
 
   useEffect(() => {
     fetchEmployeePayCodes();
-  }, [employeeId]);
+  }, [employeeIdentifier]);
 
   return {
     allowedPayCodes,

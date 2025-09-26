@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/auth/AuthProvider';
 import { usePayrollData } from '@/hooks/usePayrollData';
 import { useEmployeePayPeriod } from '@/hooks/usePayPeriods';
+import { useEmployee } from '@/hooks/useEmployee';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import React from "react";
@@ -57,8 +58,11 @@ export default function IndividualTimecardMinimal() {
   
   // Debug logging for route param verification
   console.info('[timecard] employeeId=', employeeId);
+  
+  // Fetch employee data using the new hook
+  const { employee: employeeData, loading: employeeLoading, error: employeeError } = useEmployee(employeeId || '');
   const { employees, loading: employeesLoading } = usePayrollData();
-  const { payPeriod, loading: payPeriodLoading } = useEmployeePayPeriod(employeeId || '');
+  const { payPeriod, loading: payPeriodLoading } = useEmployeePayPeriod(employeeData?.id || '');
   const [timesheets, setTimesheets] = useState<any[]>([]);
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [payCodeMap, setPayCodeMap] = useState<Record<string, PayCode>>({});
@@ -135,32 +139,24 @@ export default function IndividualTimecardMinimal() {
       return;
     }
 
-    // Additional validation for invalid IDs
-    if (employeeId.length < 3) {
+    // Handle employee loading and errors
+    if (employeeError && !employeeLoading) {
       toast({
         variant: "destructive",
         title: "Employee Not Found",
-        description: "Invalid employee ID format",
+        description: `Employee with ID "${employeeId}" was not found`,
       });
       navigate("/timesheets");
       return;
     }
 
     // Log successful validation
-    console.log("✅ Valid Employee ID from URL:", employeeId);
-
-    // Additional check for demo - warn about unknown employee but allow access
-    const knownEmployees = ['EMP001', 'EMP002', 'EMP003', 'TEST001'];
-    if (!knownEmployees.includes(employeeId)) {
-      toast({
-        title: "Demo Mode",
-        description: `Showing demo data for employee ID: ${employeeId}`,
-        duration: 3000,
-      });
+    if (employeeData) {
+      console.log("✅ Valid Employee found:", employeeData);
     }
 
     setValidatingEmployee(false);
-  }, [employeeId, navigate, toast]);
+  }, [employeeId, employeeData, employeeError, employeeLoading, navigate, toast]);
 
   // Show auto-expand toast
   useEffect(() => {
@@ -182,20 +178,17 @@ export default function IndividualTimecardMinimal() {
     });
   }, [periodDates, setSearchParams]);
 
-  // Mock employee data based on employeeId - in real app, fetch from employees table
-  const getEmployeeName = (empId: string) => {
-    const names = {
-      'EMP001': 'John Smith',
-      'EMP002': 'Sarah Chen', 
-      'EMP003': 'Mike Johnson',
-      'TEST001': 'Test Employee'
-    };
-    return names[empId] || `Employee ${empId}`;
-  };
-
-  const employee: Employee = {
+  // Use real employee data or fallback to mock data
+  const employee: Employee = employeeData ? {
+    id: employeeData.id,
+    name: `${employeeData.first_name} ${employeeData.last_name}`,
+    employeeId: employeeData.employee_number,
+    positionId: employeeData.classification || "GENERAL_LABOR",
+    department: "Operations",
+    status: employeeData.status as "Active" | "Inactive"
+  } : {
     id: "1",
-    name: getEmployeeName(employeeId || "EMP001"),
+    name: `Employee ${employeeId}`,
     employeeId: employeeId || "EMP001",
     positionId: "GENERAL_LABOR",
     department: "Operations",
