@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -30,6 +30,7 @@ const menuGroups = {
   ],
   "Payroll & Reports": [
     { title: "Payroll", url: "/payroll", icon: Calculator },
+    { title: "Master Pay Codes", url: "/pay-codes-master", icon: Receipt },
     { title: "Reports", url: "/reports", icon: BarChart3 },
   ],
   "Security": [

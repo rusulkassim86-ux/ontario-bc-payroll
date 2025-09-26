@@ -22,6 +22,7 @@ import PunchConfig from "./pages/PunchConfig";
 import Devices from "./pages/Devices";
 import DevRoutes from "./pages/DevRoutes";
 import NotFound from "./pages/NotFound";
+import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
                 <Route path="/timesheets" element={<Timesheets />} />
                 <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
                 <Route path="/payroll" element={<Payroll />} />
+                <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/security-center" element={<SecurityCenter />} />
                 <Route path="/backup-restore" element={<BackupRestore />} />

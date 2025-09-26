@@ -932,6 +932,42 @@ export type Database = {
           },
         ]
       }
+      pay_code_gl_map: {
+        Row: {
+          code: string
+          company_scope: string
+          created_at: string
+          effective_from: string | null
+          effective_to: string | null
+          gl_account: string
+          id: string
+          mapping_segment: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_scope?: string
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          gl_account: string
+          id?: string
+          mapping_segment?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_scope?: string
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          gl_account?: string
+          id?: string
+          mapping_segment?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pay_codes: {
         Row: {
           active: boolean
@@ -1004,6 +1040,45 @@ export type Database = {
           union_code?: string | null
           updated_at?: string
           worksite_id?: string | null
+        }
+        Relationships: []
+      }
+      pay_codes_master: {
+        Row: {
+          code: string
+          company_scope: string
+          created_at: string
+          description: string
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          company_scope?: string
+          created_at?: string
+          description: string
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          company_scope?: string
+          created_at?: string
+          description?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          type?: string
+          updated_at?: string
         }
         Relationships: []
       }
