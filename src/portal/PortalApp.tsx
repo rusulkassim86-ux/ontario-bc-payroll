@@ -6,6 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { PortalAuthProvider } from "./auth/PortalAuthProvider";
 import { PortalAuthGuard } from "./auth/PortalAuthGuard";
 import { PortalLayout } from "./components/layout/PortalLayout";
+import { SignIn } from "./pages/SignIn";
 import { Dashboard } from "./pages/Dashboard";
 import { MyTime } from "./pages/MyTime";
 import { MyPay } from "./pages/MyPay";
@@ -14,9 +15,6 @@ import { Profile } from "./pages/Profile";
 import { Documents } from "./pages/Documents";
 import { Approvals } from "./pages/Approvals";
 import { Team } from "./pages/Team";
-import { SignIn } from "./pages/SignIn";
-import { EnrollTwoFA } from "./pages/EnrollTwoFA";
-import { ResetPassword } from "./pages/ResetPassword";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,12 +40,10 @@ export function PortalApp() {
             <Sonner />
             <Routes>
               {/* Public routes */}
-              <Route path="/signin" element={<SignIn />} />
-              <Route path="/enroll-2fa" element={<EnrollTwoFA />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/portal/signin" element={<SignIn />} />
               
               {/* Protected routes */}
-              <Route path="/*" element={
+              <Route path="/portal/*" element={
                 <PortalAuthGuard>
                   <PortalLayout>
                     <Routes>
@@ -58,11 +54,19 @@ export function PortalApp() {
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/documents" element={<Documents />} />
                       
-                      {/* Manager-only routes */}
-                      <Route path="/approvals" element={<Approvals />} />
-                      <Route path="/team" element={<Team />} />
+                      {/* Manager/Admin-only routes */}
+                      <Route path="/approvals" element={
+                        <PortalAuthGuard managerOnly>
+                          <Approvals />
+                        </PortalAuthGuard>
+                      } />
+                      <Route path="/team" element={
+                        <PortalAuthGuard managerOnly>
+                          <Team />
+                        </PortalAuthGuard>
+                      } />
                       
-                      <Route path="*" element={<Navigate to="/" replace />} />
+                      <Route path="*" element={<Navigate to="/portal" replace />} />
                     </Routes>
                   </PortalLayout>
                 </PortalAuthGuard>

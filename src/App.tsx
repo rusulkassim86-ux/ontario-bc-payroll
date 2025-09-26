@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { AuthProvider } from "./components/auth/AuthProvider";
 import { AuthGuard } from "./components/auth/AuthGuard";
@@ -26,6 +26,7 @@ import DevRoutes from "./pages/DevRoutes";
 import NotFound from "./pages/NotFound";
 import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
+import { PortalApp } from "./portal/PortalApp";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,10 @@ const App = () => (
             <Route path="/devices" element={<Devices />} />
             <Route path="/punch-config" element={<PunchConfig />} />
             <Route path="/dev/routes" element={<DevRoutes />} />
+            
+            {/* Portal routes */}
+            <Route path="/portal/*" element={<PortalApp />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
             </AppLayout>
