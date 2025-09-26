@@ -15,6 +15,7 @@ import IndividualTimecardMinimal from "./pages/IndividualTimecardMinimal";
 import TimecardRedirect from "./pages/TimecardRedirect";
 import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
+import CRARemittances from "./pages/CRARemittances";
 import SecurityCenter from "./pages/SecurityCenter";
 import BackupRestore from "./pages/BackupRestore";
 import DeviceMapping from "./pages/DeviceMapping";
@@ -39,6 +40,7 @@ console.table([
   { path: "/payroll", component: "Payroll" },
   { path: "/pay-codes-master", component: "PayCodesMasterPage" },
   { path: "/reports", component: "Reports" },
+  { path: "/cra-remittances", component: "CRARemittances" },
   { path: "/security-center", component: "SecurityCenter" },
   { path: "/backup-restore", component: "BackupRestore" },
   { path: "/device-mapping", component: "DeviceMapping" },
@@ -70,6 +72,7 @@ const App = () => (
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/cra-remittances" element={<CRARemittances />} />
             <Route path="/security-center" element={<SecurityCenter />} />
             <Route path="/backup-restore" element={<BackupRestore />} />
             <Route path="/device-mapping" element={<DeviceMapping />} />

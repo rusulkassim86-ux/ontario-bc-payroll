@@ -3,7 +3,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, Calendar, AlertTriangle, Clock, TrendingUp, Building2, FileText, UserCheck } from "lucide-react";
+import { Users, DollarSign, Calendar, AlertTriangle, Clock, TrendingUp, Building2, FileText, UserCheck, Calculator, Receipt } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
@@ -40,10 +40,10 @@ export default function Dashboard() {
             icon={<Calendar className="w-5 h-5 text-accent" />}
           />
           <StatCard
-            title="Pending Actions"
-            value="5"
-            description="Require attention"
-            icon={<AlertTriangle className="w-5 h-5 text-warning" />}
+            title="CRA Remittance Due"
+            value="Jan 15"
+            description="Next deadline"
+            icon={<Receipt className="w-5 h-5 text-warning" />}
           />
         </div>
 
@@ -57,21 +57,21 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full justify-start" variant="outline">
-                <Calendar className="w-4 h-4 mr-2" />
-                Run Current Payroll
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate("/payroll")}
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                Run Payroll
               </Button>
-              <Button className="w-full justify-start" variant="outline">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate("/employees")}
+              >
                 <Users className="w-4 h-4 mr-2" />
                 Add New Employee
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <FileText className="w-4 h-4 mr-2" />
-                Generate Reports
-              </Button>
-              <Button className="w-full justify-start" variant="outline">
-                <Building2 className="w-4 h-4 mr-2" />
-                Company Settings
               </Button>
               <Button 
                 className="w-full justify-start" 
@@ -79,7 +79,23 @@ export default function Dashboard() {
                 onClick={() => navigate("/timesheets")}
               >
                 <UserCheck className="w-4 h-4 mr-2" />
-                Timesheets
+                Approve Timesheets
+              </Button>
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate("/reports")}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Generate Reports
+              </Button>
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={() => navigate("/cra-remittances")}
+              >
+                <Receipt className="w-4 h-4 mr-2" />
+                CRA Remittances
               </Button>
             </CardContent>
           </Card>
@@ -126,12 +142,12 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Pending Items */}
+        {/* Alerts & Notifications */}
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-warning" />
-              Items Requiring Attention
+              Alerts & Notifications
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -140,31 +156,31 @@ export default function Dashboard() {
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-warning rounded-full"></div>
                   <div>
-                    <p className="font-medium">Missing TD1 Forms</p>
-                    <p className="text-sm text-muted-foreground">3 employees need to complete tax forms</p>
+                    <p className="font-medium">Pending Timesheet Approvals</p>
+                    <p className="text-sm text-muted-foreground">12 timesheets require manager approval</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Review</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate("/timesheets")}>Review</Button>
               </div>
               <div className="flex items-center justify-between p-3 bg-accent/5 border border-accent/20 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-accent rounded-full"></div>
                   <div>
-                    <p className="font-medium">Bank Account Verification</p>
-                    <p className="text-sm text-muted-foreground">2 employees need banking info updated</p>
+                    <p className="font-medium">CRA Remittance Due</p>
+                    <p className="text-sm text-muted-foreground">January remittance due in 8 days</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Review</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate("/cra-remittances")}>View</Button>
               </div>
               <div className="flex items-center justify-between p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-destructive rounded-full"></div>
                   <div>
-                    <p className="font-medium">Timesheet Approvals</p>
-                    <p className="text-sm text-muted-foreground">12 timesheets pending manager approval</p>
+                    <p className="font-medium">Missing TD1 Forms</p>
+                    <p className="text-sm text-muted-foreground">3 employees need to complete tax forms</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Review</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate("/employees")}>Review</Button>
               </div>
             </div>
           </CardContent>

@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -17,27 +17,29 @@ import { useLocation } from "react-router-dom";
 const menuGroups = {
   "Main": [
     { title: "Dashboard", url: "/", icon: Home },
-    { title: "Company Setup", url: "/company", icon: Building2 },
     { title: "Employees", url: "/employees", icon: Users },
-  ],
-  "Time & Attendance": [
     { title: "Timesheets", url: "/timesheets", icon: Clock },
-    { title: "Individual Timecard", url: "/individual-timecard", icon: FileText },
-    { title: "Devices", url: "/devices", icon: Smartphone },
-    { title: "Device Mapping", url: "/device-mapping", icon: Activity },
-    { title: "Punch Feed", url: "/punch-feed", icon: Clock },
+  ],
+  "Payroll Processing": [
+    { title: "Payroll", url: "/payroll", icon: Calculator },
+    { title: "Pay Codes Master", url: "/pay-codes-master", icon: List },
+  ],
+  "Reports & Compliance": [
+    { title: "Reports", url: "/reports", icon: BarChart3 },
+    { title: "CRA Remittances", url: "/cra-remittances", icon: Receipt },
+  ],
+  "Administration": [
+    { title: "Company", url: "/company", icon: Building2 },
+    { title: "User Management", url: "/user-management", icon: UserCog },
+    { title: "Devices", url: "/devices", icon: Monitor },
+    { title: "Device Mapping", url: "/device-mapping", icon: Smartphone },
+    { title: "Punch Feed", url: "/punch-feed", icon: Zap },
     { title: "Punch Config", url: "/punch-config", icon: Settings },
   ],
-  "Payroll & Reports": [
-    { title: "Payroll", url: "/payroll", icon: Calculator },
-    { title: "Master Pay Codes", url: "/pay-codes-master", icon: Receipt },
-    { title: "Reports", url: "/reports", icon: BarChart3 },
-  ],
   "Security": [
-    { title: "User Management", url: "/user-management", icon: Users },
     { title: "Security Center", url: "/security-center", icon: Shield },
-    { title: "Backup & Restore", url: "/backup-restore", icon: Database },
-  ]
+    { title: "Backup & Restore", url: "/backup-restore", icon: HardDrive },
+  ],
 };
 
 export function AppSidebar() {
