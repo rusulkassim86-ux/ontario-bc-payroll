@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, ChevronLeft, ChevronRight, Info, FileText } from "lucide-react";
 import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
 import { PayCode } from '@/hooks/usePayCodes';
+import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
 import * as XLSX from 'xlsx';
 import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, isMonday, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +57,7 @@ export default function IndividualTimecardMinimal() {
   const [timesheets, setTimesheets] = useState<any[]>([]);
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [payCodeMap, setPayCodeMap] = useState<Record<string, PayCode>>({});
+  const [validatingEmployee, setValidatingEmployee] = useState(true);
 
   // Calculate bi-weekly period based on company pay period settings
   const calculateBiWeeklyPeriod = (providedStart?: string, providedEnd?: string) => {
@@ -116,6 +118,44 @@ export default function IndividualTimecardMinimal() {
   const [showEndCalendar, setShowEndCalendar] = useState(false);
   const [activeTab, setActiveTab] = useState("timecard");
 
+  // Validate employee ID and handle invalid IDs
+  useEffect(() => {
+    if (!employeeId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No employee ID provided",
+      });
+      navigate("/timesheets");
+      return;
+    }
+
+    // Mock validation - in real app, check against employees table
+    const isValidEmployee = /^[A-Z0-9]+$/.test(employeeId) && employeeId.length >= 3;
+    
+    if (!isValidEmployee) {
+      toast({
+        variant: "destructive",
+        title: "Employee Not Found",
+        description: `Invalid employee ID: ${employeeId}`,
+      });
+      navigate("/timesheets");
+      return;
+    }
+
+    // Additional check for demo - warn about unknown employee but allow access
+    const knownEmployees = ['EMP001', 'EMP002', 'EMP003', 'TEST001'];
+    if (!knownEmployees.includes(employeeId)) {
+      toast({
+        title: "Demo Mode",
+        description: `Showing demo data for employee ID: ${employeeId}`,
+        duration: 3000,
+      });
+    }
+
+    setValidatingEmployee(false);
+  }, [employeeId, navigate, toast]);
+
   // Show auto-expand toast
   useEffect(() => {
     if (autoExpanded) {
@@ -136,10 +176,20 @@ export default function IndividualTimecardMinimal() {
     });
   }, [periodDates, setSearchParams]);
 
-  // Mock employee data based on employeeId
+  // Mock employee data based on employeeId - in real app, fetch from employees table
+  const getEmployeeName = (empId: string) => {
+    const names = {
+      'EMP001': 'John Smith',
+      'EMP002': 'Sarah Chen', 
+      'EMP003': 'Mike Johnson',
+      'TEST001': 'Test Employee'
+    };
+    return names[empId] || `Employee ${empId}`;
+  };
+
   const employee: Employee = {
     id: "1",
-    name: "John Smith",
+    name: getEmployeeName(employeeId || "EMP001"),
     employeeId: employeeId || "EMP001",
     positionId: "GENERAL_LABOR",
     department: "Operations",
@@ -509,20 +559,33 @@ export default function IndividualTimecardMinimal() {
   const totalsData = calculateTotalsWithOT();
   const periodLabel = getPeriodLabel();
 
+  // Show loading or redirect for invalid employee
+  if (validatingEmployee) {
+    return <div>Validating employee...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader
-        title="Individual Timecard"
-        action={
-          <div className="flex items-center gap-2">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => navigate("/timesheets")}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Timesheets
+              Back
             </Button>
+            <div>
+              <h1 className="text-lg font-semibold">{employee.name}</h1>
+              <p className="text-sm text-muted-foreground">
+                ID: {employee.employeeId} • {employee.department} • {employee.status}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleExportPDF}>
               <Download className="h-4 w-4 mr-2" />
               Export PDF
@@ -540,8 +603,8 @@ export default function IndividualTimecardMinimal() {
               Approve Timecard
             </Button>
           </div>
-        }
-      />
+        </div>
+      </div>
 
       <div className="p-6 space-y-6">
         {/* Employee Header Section */}
@@ -713,6 +776,7 @@ export default function IndividualTimecardMinimal() {
                   <TabsTrigger value="schedule" className="px-6">Schedule</TabsTrigger>
                   <TabsTrigger value="supplemental" className="px-6">Supplemental Pay Codes</TabsTrigger>
                   <TabsTrigger value="time-off" className="px-6">Time Off Balances</TabsTrigger>
+                  <TabsTrigger value="usage-report" className="px-6">Pay Code Usage</TabsTrigger>
                 </TabsList>
               </div>
 
@@ -943,8 +1007,42 @@ export default function IndividualTimecardMinimal() {
               </TabsContent>
 
               <TabsContent value="supplemental" className="p-6">
-                <div className="text-center text-muted-foreground">
-                  Supplemental pay codes coming soon...
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Supplemental Pay Codes</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Premiums, banked time, deductions, and benefits available for this employee
+                    </p>
+                  </div>
+                  <div className="grid gap-3">
+                    {/* Mock supplemental pay codes - in real app, filter from usePayCodes */}
+                    {[
+                      { code: 'PREM', name: 'Premium Pay', category: 'premium', multiplier: 1.5 },
+                      { code: 'BANK', name: 'Banked Time', category: 'bank', multiplier: 1.0 },
+                      { code: 'UNION', name: 'Union Dues', category: 'deduction', amount: 45.00 },
+                      { code: 'BENEFIT', name: 'Health Benefits', category: 'benefit', amount: 125.00 }
+                    ].map((payCode) => (
+                      <Card key={payCode.code} className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-semibold">{payCode.code}</span>
+                              <Badge variant="outline">{payCode.category}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{payCode.name}</p>
+                          </div>
+                          <div className="text-right">
+                            {payCode.multiplier && (
+                              <div className="text-sm font-mono">{payCode.multiplier}x rate</div>
+                            )}
+                            {payCode.amount && (
+                              <div className="text-sm font-mono">${payCode.amount}</div>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               </TabsContent>
 
@@ -952,6 +1050,10 @@ export default function IndividualTimecardMinimal() {
                 <div className="text-center text-muted-foreground">
                   Time off balances coming soon...
                 </div>
+              </TabsContent>
+
+              <TabsContent value="usage-report" className="p-6">
+                <PayCodeUsageReport />
               </TabsContent>
             </Tabs>
           </CardContent>

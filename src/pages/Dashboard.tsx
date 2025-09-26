@@ -76,10 +76,10 @@ export default function Dashboard() {
               <Button 
                 className="w-full justify-start" 
                 variant="outline"
-                onClick={() => navigate("/timecard/EMP001")}
+                onClick={() => navigate("/timesheets")}
               >
                 <UserCheck className="w-4 h-4 mr-2" />
-                Test Individual Timecard
+                Timesheets
               </Button>
             </CardContent>
           </Card>

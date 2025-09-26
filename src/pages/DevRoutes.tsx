@@ -142,7 +142,7 @@ export default function DevRoutes() {
   const handleNavigate = (path: string) => {
     // Handle dynamic routes
     if (path.includes(':employeeId')) {
-      navigate('/timecard/EMP001'); // Use example employee ID
+      navigate('/timecard/TEST001'); // Use example employee ID
     } else if (path === '*') {
       navigate('/non-existent-route'); // Trigger 404
     } else {
