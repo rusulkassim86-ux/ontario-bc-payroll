@@ -846,6 +846,109 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_contacts: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          employee_id: string
+          id: string
+          name: string
+          phone: string
+          relationship: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          employee_id: string
+          id?: string
+          name: string
+          phone: string
+          relationship: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          employee_id?: string
+          id?: string
+          name?: string
+          phone?: string
+          relationship?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_contacts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_documents: {
+        Row: {
+          created_at: string | null
+          doc_type: string
+          downloaded_count: number | null
+          employee_id: string
+          file_size: number | null
+          id: string
+          last_downloaded_at: string | null
+          last_downloaded_by: string | null
+          mime_type: string | null
+          original_filename: string
+          storage_path: string
+          updated_at: string | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          doc_type: string
+          downloaded_count?: number | null
+          employee_id: string
+          file_size?: number | null
+          id?: string
+          last_downloaded_at?: string | null
+          last_downloaded_by?: string | null
+          mime_type?: string | null
+          original_filename: string
+          storage_path: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          doc_type?: string
+          downloaded_count?: number | null
+          employee_id?: string
+          file_size?: number | null
+          id?: string
+          last_downloaded_at?: string | null
+          last_downloaded_by?: string | null
+          mime_type?: string | null
+          original_filename?: string
+          storage_path?: string
+          updated_at?: string | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_documents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_rates: {
         Row: {
           base_rate: number
@@ -885,6 +988,7 @@ export type Database = {
           banking_info_encrypted: string | null
           cba_id: string | null
           classification: string | null
+          company_code: string | null
           company_id: string
           cpp_exempt: boolean
           created_at: string
@@ -892,19 +996,31 @@ export type Database = {
           email: string | null
           employee_number: string
           first_name: string
+          fte_hours_per_week: number | null
+          gl_cost_center: string | null
           hire_date: string
           id: string
           last_name: string
+          ot_multiplier: number | null
+          overtime_eligible: boolean | null
+          permit_expiry: string | null
           phone: string | null
+          probation_end: string | null
           province_code: string
+          reports_to_id: string | null
+          seniority_date: string | null
           sin_encrypted: string | null
           status: string
           step: number | null
           td1_federal: Json
+          td1_federal_status: string | null
           td1_provincial: Json
+          td1_provincial_status: string | null
           termination_date: string | null
           union_id: string | null
           updated_at: string
+          vacation_policy_id: string | null
+          work_eligibility: string | null
           worksite_id: string
         }
         Insert: {
@@ -912,6 +1028,7 @@ export type Database = {
           banking_info_encrypted?: string | null
           cba_id?: string | null
           classification?: string | null
+          company_code?: string | null
           company_id: string
           cpp_exempt?: boolean
           created_at?: string
@@ -919,19 +1036,31 @@ export type Database = {
           email?: string | null
           employee_number: string
           first_name: string
+          fte_hours_per_week?: number | null
+          gl_cost_center?: string | null
           hire_date: string
           id?: string
           last_name: string
+          ot_multiplier?: number | null
+          overtime_eligible?: boolean | null
+          permit_expiry?: string | null
           phone?: string | null
+          probation_end?: string | null
           province_code: string
+          reports_to_id?: string | null
+          seniority_date?: string | null
           sin_encrypted?: string | null
           status?: string
           step?: number | null
           td1_federal?: Json
+          td1_federal_status?: string | null
           td1_provincial?: Json
+          td1_provincial_status?: string | null
           termination_date?: string | null
           union_id?: string | null
           updated_at?: string
+          vacation_policy_id?: string | null
+          work_eligibility?: string | null
           worksite_id: string
         }
         Update: {
@@ -939,6 +1068,7 @@ export type Database = {
           banking_info_encrypted?: string | null
           cba_id?: string | null
           classification?: string | null
+          company_code?: string | null
           company_id?: string
           cpp_exempt?: boolean
           created_at?: string
@@ -946,19 +1076,31 @@ export type Database = {
           email?: string | null
           employee_number?: string
           first_name?: string
+          fte_hours_per_week?: number | null
+          gl_cost_center?: string | null
           hire_date?: string
           id?: string
           last_name?: string
+          ot_multiplier?: number | null
+          overtime_eligible?: boolean | null
+          permit_expiry?: string | null
           phone?: string | null
+          probation_end?: string | null
           province_code?: string
+          reports_to_id?: string | null
+          seniority_date?: string | null
           sin_encrypted?: string | null
           status?: string
           step?: number | null
           td1_federal?: Json
+          td1_federal_status?: string | null
           td1_provincial?: Json
+          td1_provincial_status?: string | null
           termination_date?: string | null
           union_id?: string | null
           updated_at?: string
+          vacation_policy_id?: string | null
+          work_eligibility?: string | null
           worksite_id?: string
         }
         Relationships: [
@@ -977,6 +1119,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employees_reports_to_id_fkey"
+            columns: ["reports_to_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employees_union_id_fkey"
             columns: ["union_id"]
             isOneToOne: false
@@ -988,6 +1137,13 @@ export type Database = {
             columns: ["worksite_id"]
             isOneToOne: false
             referencedRelation: "worksites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_employees_vacation_policy"
+            columns: ["vacation_policy_id"]
+            isOneToOne: false
+            referencedRelation: "vacation_policies"
             referencedColumns: ["id"]
           },
         ]
@@ -2111,6 +2267,44 @@ export type Database = {
           },
         ]
       }
+      vacation_policies: {
+        Row: {
+          accrual_rate_pct: number
+          carryover_rules: Json | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          accrual_rate_pct: number
+          carryover_rules?: Json | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          accrual_rate_pct?: number
+          carryover_rules?: Json | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacation_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wcb_rules: {
         Row: {
           base_rate: number
@@ -2152,6 +2346,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      work_permit_reminders: {
+        Row: {
+          created_at: string | null
+          employee_id: string
+          id: string
+          permit_expiry: string
+          reminder_type: string
+          sent_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          permit_expiry: string
+          reminder_type: string
+          sent_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          permit_expiry?: string
+          reminder_type?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_permit_reminders_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       worksites: {
         Row: {
@@ -2212,6 +2441,10 @@ export type Database = {
           p_totals: Json
         }
         Returns: string
+      }
+      check_work_permit_expiry: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       create_audit_log: {
         Args: {
