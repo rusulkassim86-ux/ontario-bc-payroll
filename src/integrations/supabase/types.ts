@@ -498,6 +498,80 @@ export type Database = {
         }
         Relationships: []
       }
+      cra_submissions: {
+        Row: {
+          company_id: string
+          confirmation_number: string | null
+          confirmed_at: string | null
+          cra_reference_number: string | null
+          created_at: string
+          created_by: string | null
+          csv_url: string | null
+          details_json: Json
+          employee_count: number | null
+          errors_json: Json
+          file_url: string | null
+          id: string
+          pdf_url: string | null
+          status: string
+          submission_type: string
+          tax_year: number
+          transmitted_at: string | null
+          updated_at: string
+          xml_url: string | null
+        }
+        Insert: {
+          company_id: string
+          confirmation_number?: string | null
+          confirmed_at?: string | null
+          cra_reference_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          csv_url?: string | null
+          details_json?: Json
+          employee_count?: number | null
+          errors_json?: Json
+          file_url?: string | null
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          submission_type: string
+          tax_year: number
+          transmitted_at?: string | null
+          updated_at?: string
+          xml_url?: string | null
+        }
+        Update: {
+          company_id?: string
+          confirmation_number?: string | null
+          confirmed_at?: string | null
+          cra_reference_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          csv_url?: string | null
+          details_json?: Json
+          employee_count?: number | null
+          errors_json?: Json
+          file_url?: string | null
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          submission_type?: string
+          tax_year?: number
+          transmitted_at?: string | null
+          updated_at?: string
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cra_submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cra_tax_tables: {
         Row: {
           created_at: string
@@ -1076,6 +1150,74 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      employee_year_end_summary: {
+        Row: {
+          created_at: string
+          employee_id: string
+          finalized_at: string | null
+          id: string
+          is_finalized: boolean
+          other_deductions: Json
+          other_income: Json
+          tax_year: number
+          total_cpp_contributions: number
+          total_cpp_pensionable: number
+          total_ei_insurable: number
+          total_ei_premiums: number
+          total_employment_income: number
+          total_income_tax: number
+          total_rpp_contributions: number
+          total_union_dues: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          finalized_at?: string | null
+          id?: string
+          is_finalized?: boolean
+          other_deductions?: Json
+          other_income?: Json
+          tax_year: number
+          total_cpp_contributions?: number
+          total_cpp_pensionable?: number
+          total_ei_insurable?: number
+          total_ei_premiums?: number
+          total_employment_income?: number
+          total_income_tax?: number
+          total_rpp_contributions?: number
+          total_union_dues?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          finalized_at?: string | null
+          id?: string
+          is_finalized?: boolean
+          other_deductions?: Json
+          other_income?: Json
+          tax_year?: number
+          total_cpp_contributions?: number
+          total_cpp_pensionable?: number
+          total_ei_insurable?: number
+          total_ei_premiums?: number
+          total_employment_income?: number
+          total_income_tax?: number
+          total_rpp_contributions?: number
+          total_union_dues?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_year_end_summary_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employees: {
         Row: {
@@ -1677,6 +1819,92 @@ export type Database = {
           },
         ]
       }
+      paycode_cra_mapping: {
+        Row: {
+          box_description: string
+          company_code: string
+          company_id: string
+          cost_center: string | null
+          cra_box: string
+          created_at: string
+          deduction_code: string | null
+          department_code: string | null
+          effective_from: string
+          effective_to: string | null
+          flags_json: Json
+          gl_account: string | null
+          id: string
+          is_active: boolean
+          is_cpp_pensionable: boolean | null
+          is_ei_insurable: boolean | null
+          is_taxable_federal: boolean | null
+          is_taxable_provincial: boolean | null
+          is_vacation_eligible: boolean | null
+          mapping_type: string
+          pay_code: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          box_description: string
+          company_code: string
+          company_id: string
+          cost_center?: string | null
+          cra_box: string
+          created_at?: string
+          deduction_code?: string | null
+          department_code?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          flags_json?: Json
+          gl_account?: string | null
+          id?: string
+          is_active?: boolean
+          is_cpp_pensionable?: boolean | null
+          is_ei_insurable?: boolean | null
+          is_taxable_federal?: boolean | null
+          is_taxable_provincial?: boolean | null
+          is_vacation_eligible?: boolean | null
+          mapping_type: string
+          pay_code: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          box_description?: string
+          company_code?: string
+          company_id?: string
+          cost_center?: string | null
+          cra_box?: string
+          created_at?: string
+          deduction_code?: string | null
+          department_code?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          flags_json?: Json
+          gl_account?: string | null
+          id?: string
+          is_active?: boolean
+          is_cpp_pensionable?: boolean | null
+          is_ei_insurable?: boolean | null
+          is_taxable_federal?: boolean | null
+          is_taxable_provincial?: boolean | null
+          is_vacation_eligible?: boolean | null
+          mapping_type?: string
+          pay_code?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paycode_cra_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_locked_until: string | null
@@ -1943,6 +2171,80 @@ export type Database = {
           },
         ]
       }
+      remittance_periods: {
+        Row: {
+          company_id: string
+          created_at: string
+          due_date: string
+          eft_file_url: string | null
+          filed_date: string | null
+          id: string
+          paid_date: string | null
+          pd7a_url: string | null
+          period_end: string
+          period_start: string
+          period_type: string
+          status: string
+          total_cpp_employee: number
+          total_cpp_employer: number
+          total_ei_employee: number
+          total_ei_employer: number
+          total_income_tax: number
+          total_remittance: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          due_date: string
+          eft_file_url?: string | null
+          filed_date?: string | null
+          id?: string
+          paid_date?: string | null
+          pd7a_url?: string | null
+          period_end: string
+          period_start: string
+          period_type: string
+          status?: string
+          total_cpp_employee?: number
+          total_cpp_employer?: number
+          total_ei_employee?: number
+          total_ei_employer?: number
+          total_income_tax?: number
+          total_remittance?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          due_date?: string
+          eft_file_url?: string | null
+          filed_date?: string | null
+          id?: string
+          paid_date?: string | null
+          pd7a_url?: string | null
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          status?: string
+          total_cpp_employee?: number
+          total_cpp_employer?: number
+          total_ei_employee?: number
+          total_ei_employer?: number
+          total_income_tax?: number
+          total_remittance?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remittance_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roe_slips: {
         Row: {
           comments: string | null
@@ -2134,15 +2436,19 @@ export type Database = {
           company_id: string
           created_at: string
           employee_id: string
+          errors_json: Json | null
           generated_at: string
           generated_by: string | null
           id: string
+          is_amended: boolean | null
           issued_at: string | null
           original_slip_id: string | null
           other_boxes: Json
+          pdf_url: string | null
           status: string
           tax_year: number
           updated_at: string
+          xml_url: string | null
         }
         Insert: {
           amendment_reason?: string | null
@@ -2160,15 +2466,19 @@ export type Database = {
           company_id: string
           created_at?: string
           employee_id: string
+          errors_json?: Json | null
           generated_at?: string
           generated_by?: string | null
           id?: string
+          is_amended?: boolean | null
           issued_at?: string | null
           original_slip_id?: string | null
           other_boxes?: Json
+          pdf_url?: string | null
           status?: string
           tax_year: number
           updated_at?: string
+          xml_url?: string | null
         }
         Update: {
           amendment_reason?: string | null
@@ -2186,15 +2496,19 @@ export type Database = {
           company_id?: string
           created_at?: string
           employee_id?: string
+          errors_json?: Json | null
           generated_at?: string
           generated_by?: string | null
           id?: string
+          is_amended?: boolean | null
           issued_at?: string | null
           original_slip_id?: string | null
           other_boxes?: Json
+          pdf_url?: string | null
           status?: string
           tax_year?: number
           updated_at?: string
+          xml_url?: string | null
         }
         Relationships: []
       }
@@ -2684,6 +2998,10 @@ export type Database = {
         }
         Returns: string
       }
+      build_employee_year_end_summary: {
+        Args: { p_employee_id: string; p_tax_year: number }
+        Returns: string
+      }
       calculate_cra_taxes: {
         Args: {
           gross_income: number
@@ -2692,6 +3010,14 @@ export type Database = {
           tax_year?: number
         }
         Returns: number
+      }
+      calculate_remittance_period_totals: {
+        Args: {
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: Json
       }
       check_work_permit_expiry: {
         Args: Record<PropertyKey, never>
