@@ -331,6 +331,56 @@ export type Database = {
         }
         Relationships: []
       }
+      cra_compliance_log: {
+        Row: {
+          company_id: string
+          compliance_status: string
+          compliance_type: string
+          cra_confirmation: string | null
+          created_at: string
+          entity_id: string
+          filed_at: string | null
+          filed_by: string | null
+          id: string
+          updated_at: string
+          validation_errors: Json | null
+        }
+        Insert: {
+          company_id: string
+          compliance_status?: string
+          compliance_type: string
+          cra_confirmation?: string | null
+          created_at?: string
+          entity_id: string
+          filed_at?: string | null
+          filed_by?: string | null
+          id?: string
+          updated_at?: string
+          validation_errors?: Json | null
+        }
+        Update: {
+          company_id?: string
+          compliance_status?: string
+          compliance_type?: string
+          cra_confirmation?: string | null
+          created_at?: string
+          entity_id?: string
+          filed_at?: string | null
+          filed_by?: string | null
+          id?: string
+          updated_at?: string
+          validation_errors?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cra_compliance_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cra_filing_records: {
         Row: {
           company_id: string
@@ -444,6 +494,51 @@ export type Database = {
           total_federal_tax?: number
           total_provincial_tax?: number
           total_remittance_due?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cra_tax_tables: {
+        Row: {
+          created_at: string
+          effective_end: string | null
+          effective_start: string
+          id: string
+          income_from: number
+          income_to: number
+          is_active: boolean
+          jurisdiction: string
+          pay_period_type: string
+          tax_amount: number
+          tax_year: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_end?: string | null
+          effective_start: string
+          id?: string
+          income_from: number
+          income_to: number
+          is_active?: boolean
+          jurisdiction: string
+          pay_period_type: string
+          tax_amount: number
+          tax_year: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_end?: string | null
+          effective_start?: string
+          id?: string
+          income_from?: number
+          income_to?: number
+          is_active?: boolean
+          jurisdiction?: string
+          pay_period_type?: string
+          tax_amount?: number
+          tax_year?: number
           updated_at?: string
         }
         Relationships: []
@@ -1848,6 +1943,99 @@ export type Database = {
           },
         ]
       }
+      roe_slips: {
+        Row: {
+          comments: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          final_pay_period_end: string
+          first_day_worked: string
+          generated_at: string
+          id: string
+          insurable_earnings: number
+          insurable_hours: number
+          last_day_worked: string
+          other_monies: Json
+          pay_period_details: Json
+          payroll_reference_number: string | null
+          reason_for_issuing: string
+          roe_number: string
+          serial_number: string | null
+          status: string
+          statutory_holiday_pay: number
+          submitted_at: string | null
+          total_insurable_earnings: number
+          updated_at: string
+          vacation_pay: number
+        }
+        Insert: {
+          comments?: string | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          final_pay_period_end: string
+          first_day_worked: string
+          generated_at?: string
+          id?: string
+          insurable_earnings?: number
+          insurable_hours?: number
+          last_day_worked: string
+          other_monies?: Json
+          pay_period_details?: Json
+          payroll_reference_number?: string | null
+          reason_for_issuing: string
+          roe_number: string
+          serial_number?: string | null
+          status?: string
+          statutory_holiday_pay?: number
+          submitted_at?: string | null
+          total_insurable_earnings?: number
+          updated_at?: string
+          vacation_pay?: number
+        }
+        Update: {
+          comments?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          final_pay_period_end?: string
+          first_day_worked?: string
+          generated_at?: string
+          id?: string
+          insurable_earnings?: number
+          insurable_hours?: number
+          last_day_worked?: string
+          other_monies?: Json
+          pay_period_details?: Json
+          payroll_reference_number?: string | null
+          reason_for_issuing?: string
+          roe_number?: string
+          serial_number?: string | null
+          status?: string
+          statutory_holiday_pay?: number
+          submitted_at?: string | null
+          total_insurable_earnings?: number
+          updated_at?: string
+          vacation_pay?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roe_slips_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roe_slips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       statutory_holidays: {
         Row: {
           created_at: string
@@ -1874,6 +2062,60 @@ export type Database = {
           province_code?: string
         }
         Relationships: []
+      }
+      t4_box_mappings: {
+        Row: {
+          box_description: string
+          calculation_method: string
+          created_at: string
+          deduction_code_id: string | null
+          id: string
+          is_active: boolean
+          mapping_type: string
+          pay_code_id: string | null
+          t4_box: string
+          updated_at: string
+        }
+        Insert: {
+          box_description: string
+          calculation_method?: string
+          created_at?: string
+          deduction_code_id?: string | null
+          id?: string
+          is_active?: boolean
+          mapping_type: string
+          pay_code_id?: string | null
+          t4_box: string
+          updated_at?: string
+        }
+        Update: {
+          box_description?: string
+          calculation_method?: string
+          created_at?: string
+          deduction_code_id?: string | null
+          id?: string
+          is_active?: boolean
+          mapping_type?: string
+          pay_code_id?: string | null
+          t4_box?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "t4_box_mappings_deduction_code_id_fkey"
+            columns: ["deduction_code_id"]
+            isOneToOne: false
+            referencedRelation: "deduction_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "t4_box_mappings_pay_code_id_fkey"
+            columns: ["pay_code_id"]
+            isOneToOne: false
+            referencedRelation: "pay_codes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       t4_slips: {
         Row: {
@@ -2442,6 +2684,15 @@ export type Database = {
         }
         Returns: string
       }
+      calculate_cra_taxes: {
+        Args: {
+          gross_income: number
+          jurisdiction: string
+          pay_periods_per_year: number
+          tax_year?: number
+        }
+        Returns: number
+      }
       check_work_permit_expiry: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2465,6 +2716,10 @@ export type Database = {
           p_period_start: string
           p_report_type: string
         }
+        Returns: string
+      }
+      generate_roe_number: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       get_current_user_company: {
