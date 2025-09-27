@@ -19,6 +19,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { 
@@ -31,9 +32,11 @@ import {
   Download,
   Users,
   MapPin,
-  Building2
+  Building2,
+  Upload
 } from "lucide-react";
 import { NewHireForm } from "@/components/employees/NewHireForm";
+import { BulkEmployeeImport } from "@/components/employees/BulkEmployeeImport";
 import { useEmployees } from "@/hooks/useEmployees";
 
 const mockEmployees = [
@@ -91,6 +94,7 @@ export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showNewHireForm, setShowNewHireForm] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const { useEmployeesList } = useEmployees();
   const { data: employees, isLoading } = useEmployeesList();
 
@@ -106,13 +110,22 @@ export default function Employees() {
         title="Employees" 
         description="Manage your workforce across ON & BC"
         action={
-          <Button 
-            className="bg-gradient-primary"
-            onClick={() => setShowNewHireForm(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Employee
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setShowBulkImport(true)}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Import Employees
+            </Button>
+            <Button 
+              className="bg-gradient-primary"
+              onClick={() => setShowNewHireForm(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Employee
+            </Button>
+          </div>
         }
       />
       
@@ -353,6 +366,12 @@ export default function Employees() {
             />
           </DialogContent>
         </Dialog>
+
+        {/* Bulk Import Dialog */}
+        <BulkEmployeeImport 
+          open={showBulkImport}
+          onOpenChange={setShowBulkImport}
+        />
       </div>
     </div>
   );
