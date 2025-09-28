@@ -47,8 +47,8 @@ import { useToast } from "@/hooks/use-toast";
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [filterProvince, setFilterProvince] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterProvince, setFilterProvince] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [showNewHireForm, setShowNewHireForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const { useEmployeesList } = useEmployees();
@@ -72,12 +72,12 @@ export default function Employees() {
     }
 
     // Province filter
-    if (filterProvince) {
+    if (filterProvince && filterProvince !== "all") {
       filtered = filtered.filter(emp => emp.province_code === filterProvince);
     }
 
     // Status filter
-    if (filterStatus) {
+    if (filterStatus && filterStatus !== "all") {
       filtered = filtered.filter(emp => emp.status === filterStatus);
     }
 
@@ -254,8 +254,8 @@ export default function Employees() {
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Province" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Provinces</SelectItem>
+                <SelectContent className="bg-background border shadow-md z-50">
+                  <SelectItem value="all">All Provinces</SelectItem>
                   <SelectItem value="ON">Ontario</SelectItem>
                   <SelectItem value="BC">British Columbia</SelectItem>
                   <SelectItem value="AB">Alberta</SelectItem>
@@ -265,8 +265,8 @@ export default function Employees() {
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                <SelectContent className="bg-background border shadow-md z-50">
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="terminated">Terminated</SelectItem>
@@ -279,7 +279,7 @@ export default function Employees() {
                     Export
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent className="bg-background border shadow-md z-50">
                   <DropdownMenuItem onClick={() => handleExport('employees')}>
                     <FileText className="w-4 h-4 mr-2" />
                     Employee List (CSV)
@@ -387,7 +387,7 @@ export default function Employees() {
                                   <MoreVertical className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              <DropdownMenuContent align="end" className="bg-background border shadow-md z-50">
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
                                   handleRowClick(employee.id);
