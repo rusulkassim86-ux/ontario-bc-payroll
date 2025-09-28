@@ -10,6 +10,7 @@ import { AuthGuard } from "./components/auth/AuthGuard";
 import Dashboard from "./pages/Dashboard";
 import Company from "./pages/Company";
 import Employees from "./pages/Employees";
+import EmployeeProfile from "./pages/EmployeeProfile";
 import UserManagement from "./pages/UserManagement";
 import Timesheets from "./pages/Timesheets";
 import IndividualTimecardMinimal from "./pages/IndividualTimecardMinimal";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/company" element={<Company />} />
             <Route path="/employees" element={<Employees />} />
+            <Route path="/employees/:id" element={<EmployeeProfile />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/timesheets" element={<Timesheets />} />
             <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />

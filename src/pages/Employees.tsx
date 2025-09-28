@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Table, 
   TableBody, 
@@ -33,76 +35,122 @@ import {
   Users,
   MapPin,
   Building2,
-  Upload
+  Upload,
+  FileText,
+  DollarSign
 } from "lucide-react";
 import { NewHireForm } from "@/components/employees/NewHireForm";
 import { BulkEmployeeImport } from "@/components/employees/BulkEmployeeImport";
 import { useEmployees } from "@/hooks/useEmployees";
-
-const mockEmployees = [
-  {
-    id: 1,
-    name: "John Smith",
-    employeeId: "EMP001",
-    department: "Operations",
-    position: "Electrician",
-    province: "ON",
-    worksite: "Toronto Main",
-    union: "IBEW Local 353",
-    classification: "Journeyman",
-    step: 5,
-    status: "Active",
-    hireDate: "2022-01-15",
-    email: "john.smith@company.com",
-    phone: "(416) 555-0123"
-  },
-  {
-    id: 2,
-    name: "Sarah Chen",
-    employeeId: "EMP002",
-    department: "Administration",
-    position: "Payroll Coordinator",
-    province: "BC",
-    worksite: "Vancouver Office",
-    union: null,
-    classification: "Exempt",
-    step: null,
-    status: "Active",
-    hireDate: "2023-03-20",
-    email: "sarah.chen@company.com",
-    phone: "(604) 555-0456"
-  },
-  {
-    id: 3,
-    name: "Mike Johnson",
-    employeeId: "EMP003",
-    department: "Operations",
-    position: "Apprentice Electrician",
-    province: "ON",
-    worksite: "Toronto Main",
-    union: "IBEW Local 353",
-    classification: "1st Year Apprentice",
-    step: 1,
-    status: "Active",
-    hireDate: "2024-09-01",
-    email: "mike.johnson@company.com",
-    phone: "(416) 555-0789"
-  }
-];
+import { useToast } from "@/hooks/use-toast";
 
 export default function Employees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [filterProvince, setFilterProvince] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [showNewHireForm, setShowNewHireForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const { useEmployeesList } = useEmployees();
   const { data: employees, isLoading } = useEmployeesList();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const filteredEmployees = employees?.filter(emp => 
-    emp.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.employee_number.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  // Enhanced filtering logic
+  const filteredEmployees = useMemo(() => {
+    let filtered = employees || [];
+
+    // Text search
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(emp => 
+        emp.first_name.toLowerCase().includes(search) ||
+        emp.last_name.toLowerCase().includes(search) ||
+        emp.employee_number.toLowerCase().includes(search) ||
+        (emp.company_code && emp.company_code.toLowerCase().includes(search))
+      );
+    }
+
+    // Province filter
+    if (filterProvince) {
+      filtered = filtered.filter(emp => emp.province_code === filterProvince);
+    }
+
+    // Status filter
+    if (filterStatus) {
+      filtered = filtered.filter(emp => emp.status === filterStatus);
+    }
+
+    // Tab filter
+    if (activeTab === "union") {
+      filtered = filtered.filter(emp => emp.company_code?.startsWith('72S'));
+    } else if (activeTab === "non-union") {
+      filtered = filtered.filter(emp => !emp.company_code?.startsWith('72S'));
+    } else if (activeTab === "inactive") {
+      filtered = filtered.filter(emp => emp.status !== 'active');
+    }
+
+    return filtered;
+  }, [employees, searchTerm, filterProvince, filterStatus, activeTab]);
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = employees?.length || 0;
+    const union = employees?.filter(emp => emp.company_code?.startsWith('72S')).length || 0;
+    const nonUnion = total - union;
+    const inactive = employees?.filter(emp => emp.status !== 'active').length || 0;
+    const newThisMonth = employees?.filter(emp => {
+      const hireDate = new Date(emp.hire_date);
+      const now = new Date();
+      return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear();
+    }).length || 0;
+
+    return { total, union, nonUnion, inactive, newThisMonth };
+  }, [employees]);
+
+  const handleRowClick = (employeeId: string) => {
+    navigate(`/employees/${employeeId}`);
+  };
+
+  const handleExport = async (type: 'employees' | 't4') => {
+    try {
+      if (type === 'employees') {
+        // Export employee list
+        const csvData = filteredEmployees.map(emp => ({
+          'Employee ID': emp.employee_number,
+          'Name': `${emp.first_name} ${emp.last_name}`,
+          'Prefix Code': emp.company_code,
+          'Province': emp.province_code,
+          'Status': emp.status,
+          'Hire Date': emp.hire_date,
+          'Email': emp.email,
+          'Phone': emp.phone
+        }));
+        
+        const csv = [
+          Object.keys(csvData[0]).join(','),
+          ...csvData.map(row => Object.values(row).join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `employees-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        
+        toast({ title: "Export Complete", description: "Employee list exported successfully" });
+      } else {
+        toast({ title: "T4 Export", description: "T4-ready export will be implemented with year-end functionality" });
+      }
+    } catch (error) {
+      toast({ 
+        variant: "destructive", 
+        title: "Export Failed", 
+        description: "Failed to export data" 
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -139,7 +187,7 @@ export default function Employees() {
                   <Users className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">247</p>
+                  <p className="text-2xl font-bold">{stats.total}</p>
                   <p className="text-sm text-muted-foreground">Total Active</p>
                 </div>
               </div>
@@ -153,8 +201,8 @@ export default function Employees() {
                   <Building2 className="w-4 h-4 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">156</p>
-                  <p className="text-sm text-muted-foreground">Union Members</p>
+                  <p className="text-2xl font-bold">{stats.union}</p>
+                  <p className="text-sm text-muted-foreground">Union Members (72S)</p>
                 </div>
               </div>
             </CardContent>
@@ -167,8 +215,8 @@ export default function Employees() {
                   <MapPin className="w-4 h-4 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">91</p>
-                  <p className="text-sm text-muted-foreground">Non-Union</p>
+                  <p className="text-2xl font-bold">{stats.nonUnion}</p>
+                  <p className="text-sm text-muted-foreground">Non-Union (72R/OZC)</p>
                 </div>
               </div>
             </CardContent>
@@ -181,7 +229,7 @@ export default function Employees() {
                   <Users className="w-4 h-4 text-warning" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">8</p>
+                  <p className="text-2xl font-bold">{stats.newThisMonth}</p>
                   <p className="text-sm text-muted-foreground">New This Month</p>
                 </div>
               </div>
@@ -192,24 +240,56 @@ export default function Employees() {
         {/* Search and Filters */}
         <Card className="shadow-card">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  placeholder="Search employees by name, ID, or department..."
+                  placeholder="Search by name, ID, or prefix code (72R, 72S, OZC)..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" className="md:w-auto">
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
-              <Button variant="outline" className="md:w-auto">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
+              <Select value={filterProvince} onValueChange={setFilterProvince}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Province" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Provinces</SelectItem>
+                  <SelectItem value="ON">Ontario</SelectItem>
+                  <SelectItem value="BC">British Columbia</SelectItem>
+                  <SelectItem value="AB">Alberta</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="terminated">Terminated</SelectItem>
+                </SelectContent>
+              </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleExport('employees')}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Employee List (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('t4')}>
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    T4-Ready Export
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardContent>
         </Card>
@@ -233,12 +313,12 @@ export default function Employees() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Employee</TableHead>
-                      <TableHead>Employee #</TableHead>
-                      <TableHead>Classification</TableHead>
-                      <TableHead>Cost Center</TableHead>
+                      <TableHead>Employee ID</TableHead>
+                      <TableHead>Prefix Code</TableHead>
                       <TableHead>Province</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Employment Status</TableHead>
+                      <TableHead>Pay Frequency</TableHead>
+                      <TableHead>Latest Gross</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -257,7 +337,11 @@ export default function Employees() {
                       </TableRow>
                     ) : (
                       filteredEmployees.map((employee) => (
-                        <TableRow key={employee.id}>
+                        <TableRow 
+                          key={employee.id} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleRowClick(employee.id)}
+                        >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar>
@@ -272,48 +356,50 @@ export default function Employees() {
                             </div>
                           </TableCell>
                           <TableCell className="font-mono">{employee.employee_number}</TableCell>
-                          <TableCell>{employee.classification || 'N/A'}</TableCell>
-                          <TableCell>{employee.gl_cost_center || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={employee.company_code?.startsWith('72S') ? 'default' : 'secondary'}
+                              className={employee.company_code?.startsWith('72S') ? 'bg-success/10 text-success border-success/20' : ''}
+                            >
+                              {employee.company_code || 'N/A'}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={employee.province_code === 'ON' ? 'border-primary/50 text-primary' : 'border-accent/50 text-accent'}>
                               {employee.province_code}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {employee.work_eligibility === 'WorkPermit' ? (
-                              <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20">
-                                Work Permit
-                              </Badge>
-                            ) : employee.union_id ? (
-                              <Badge variant="secondary" className="bg-success/10 text-success border-success/20">
-                                Union
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary">Non-Union</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
                             <Badge variant={employee.status === 'active' ? 'default' : 'secondary'}>
                               {employee.status}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            Biweekly
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            <span className="text-muted-foreground">$</span>0.00
+                          </TableCell>
                           <TableCell>
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button variant="ghost" size="sm">
                                   <MoreVertical className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRowClick(employee.id);
+                                }}>
                                   <Eye className="w-4 h-4 mr-2" />
-                                  View Details
+                                  View Profile
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                                   <Edit className="w-4 h-4 mr-2" />
                                   Edit Employee
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
                                   <Download className="w-4 h-4 mr-2" />
                                   Download Info
                                 </DropdownMenuItem>
@@ -331,24 +417,33 @@ export default function Employees() {
           
           <TabsContent value="union">
             <Card className="shadow-card">
-              <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">Union employees view will be implemented here</p>
+              <CardHeader>
+                <CardTitle>Union Employees (72S)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Union employees are automatically filtered. Use the "All Employees" tab to see all union members.</p>
               </CardContent>
             </Card>
           </TabsContent>
           
           <TabsContent value="non-union">
             <Card className="shadow-card">
-              <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">Non-union employees view will be implemented here</p>
+              <CardHeader>
+                <CardTitle>Non-Union Employees (72R, OZC)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Non-union employees are automatically filtered. Use the "All Employees" tab to see all non-union members.</p>
               </CardContent>
             </Card>
           </TabsContent>
           
           <TabsContent value="inactive">
             <Card className="shadow-card">
-              <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">Inactive employees view will be implemented here</p>
+              <CardHeader>
+                <CardTitle>Inactive Employees</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Inactive employees are automatically filtered. Use the "All Employees" tab to see all inactive employees.</p>
               </CardContent>
             </Card>
           </TabsContent>
