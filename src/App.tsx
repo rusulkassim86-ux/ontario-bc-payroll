@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React from "react";
 import { AppLayout } from "./components/layout/AppLayout";
 import { AuthProvider } from "./components/auth/AuthProvider";
 import { AuthGuard } from "./components/auth/AuthGuard";
@@ -74,6 +75,11 @@ const App = () => (
             <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/cra-remittances" element={<CRARemittances />} />
+            <Route path="/payroll-calculator" element={
+              <React.Suspense fallback={<div>Loading...</div>}>
+                {React.createElement(React.lazy(() => import('./pages/PayrollCalculator')))}
+              </React.Suspense>
+            } />
             <Route path="/security-center" element={<SecurityCenter />} />
             <Route path="/backup-restore" element={<BackupRestore />} />
             <Route path="/device-mapping" element={<DeviceMapping />} />

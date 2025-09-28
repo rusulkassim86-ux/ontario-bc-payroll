@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -27,6 +27,7 @@ const menuGroups = {
   "Reports & Compliance": [
     { title: "Reports", url: "/reports", icon: BarChart3 },
     { title: "CRA Remittances", url: "/cra-remittances", icon: Receipt },
+    { title: "Payroll Calculator", url: "/payroll-calculator", icon: FileSpreadsheet },
   ],
   "Administration": [
     { title: "Company", url: "/company", icon: Building2 },
