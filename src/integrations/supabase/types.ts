@@ -3019,6 +3019,10 @@ export type Database = {
         }
         Returns: Json
       }
+      can_admin_access_payroll_data: {
+        Args: { p_employee_id: string }
+        Returns: boolean
+      }
       check_work_permit_expiry: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -3059,6 +3063,10 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      log_payroll_access: {
+        Args: { p_action: string; p_employee_id: string }
+        Returns: undefined
       }
       log_sensitive_action: {
         Args: {
