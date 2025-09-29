@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertCircle, CheckCircle, ArrowLeft, Upload } from "lucide-react";
 import type { ParsedFile } from "@/hooks/useFileParser";
 import { validateEmployeeData, findDuplicateEmployees } from "@/utils/adpValidation";
+import { EMPLOYEE_FIELDS } from "@/hooks/useFileParser";
 
 interface EmployeeImportPreviewProps {
   parsedFile: ParsedFile;
@@ -15,13 +16,6 @@ interface EmployeeImportPreviewProps {
   isUnion: boolean;
   onImportStart: () => void;
   onBack: () => void;
-}
-
-interface ValidationError {
-  row: number;
-  field: string;
-  value: any;
-  message: string;
 }
 
 export function EmployeeImportPreview({ 
@@ -37,9 +31,73 @@ export function EmployeeImportPreview({
     const validation = validateEmployeeData(parsedFile.data, mapping);
     const duplicates = findDuplicateEmployees(parsedFile.data, mapping);
     
+    // Transform data for preview
+    const previewData = parsedFile.data.slice(0, 10).map((row, index) => {
+      const transformedRow: Record<string, any> = { 
+        _rowIndex: index + 2,
+        _hasError: validation.errors.some(error => error.row === index + 2)
+      };
+      
+      // Apply mappings
+      Object.entries(mapping).forEach(([field, column]) => {
+        if (column && row[column] !== undefined) {
+          let value = row[column];
+          
+          // Basic transformations for display
+          switch (field) {
+            case 'full_name':
+              // Split full name for display
+              if (value && !mapping.first_name && !mapping.last_name) {
+                const parts = String(value).trim().split(/\s+/);
+                transformedRow.first_name = parts[0] || '';
+                transformedRow.last_name = parts.slice(1).join(' ') || '';
+              }
+              break;
+            case 'province_code':
+              transformedRow[field] = String(value).trim().toUpperCase();
+              break;
+            case 'hire_date':
+            case 'birth_date':
+              if (value) {
+                const date = new Date(value);
+                if (!isNaN(date.getTime())) {
+                  transformedRow[field] = date.toISOString().split('T')[0];
+                }
+              }
+              break;
+            case 'sin':
+              if (value) {
+                transformedRow[field] = String(value).replace(/\D/g, '');
+              }
+              break;
+            case 'rate':
+              if (value) {
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue)) {
+                  transformedRow[field] = numValue;
+                }
+              }
+              break;
+            case 'postal_code':
+              if (value) {
+                transformedRow[field] = String(value).replace(/\s+/g, '').toUpperCase();
+              }
+              break;
+            default:
+              transformedRow[field] = value;
+              break;
+          }
+        }
+      });
+      
+      return transformedRow;
+    });
+    
     return {
       validationResults: {
-        ...validation,
+        isValid: validation.isValid,
+        errors: validation.errors,
+        warnings: validation.warnings,
         duplicateIds: duplicates.duplicateIds,
         duplicateEmails: duplicates.duplicateEmails,
         totalRows: parsedFile.data.length,
@@ -47,96 +105,11 @@ export function EmployeeImportPreview({
         errorRows: validation.errors.length,
         warningRows: validation.warnings.length
       },
-      transformedData: parsedFile.data.slice(0, 10) // Preview first 10 rows
-    };
-  }, [parsedFile.data, mapping]);
-                if (!dateRegex.test(value) && !Date.parse(value)) {
-                  errors.push({ row: rowNumber, field, value, message: 'Invalid date format (use YYYY-MM-DD)' });
-                } else {
-                  value = new Date(value).toISOString().split('T')[0];
-                }
-              } else {
-                errors.push({ row: rowNumber, field, value, message: 'Hire date is required' });
-              }
-              break;
-              
-            case 'sin':
-              if (value) {
-                const sinStr = String(value).replace(/\D/g, '');
-                if (sinStr.length !== 9) {
-                  warnings.push({ row: rowNumber, field, value, message: 'SIN should be 9 digits' });
-                }
-                value = sinStr;
-              }
-              break;
-              
-            case 'pay_rate':
-              if (value) {
-                const numValue = parseFloat(value);
-                if (isNaN(numValue) || numValue < 0) {
-                  errors.push({ row: rowNumber, field, value, message: 'Invalid pay rate' });
-                } else {
-                  value = numValue;
-                }
-              }
-              break;
-              
-            case 'fte_hours_per_week':
-              if (value) {
-                const numValue = parseFloat(value);
-                if (isNaN(numValue) || numValue < 0 || numValue > 80) {
-                  errors.push({ row: rowNumber, field, value, message: 'FTE hours must be between 0-80' });
-                } else {
-                  value = numValue;
-                }
-              } else {
-                value = 40; // Default
-              }
-              break;
-              
-            case 'union_seniority':
-              if (isUnion && !value) {
-                warnings.push({ row: rowNumber, field, value, message: 'Union seniority recommended for union employees' });
-              }
-              break;
-          }
-          
-          transformedRow[field] = value;
-        }
-      });
-      
-      // Set defaults
-      transformedRow.company_code = companyCode;
-      transformedRow.status = 'active';
-      transformedRow.overtime_eligible = true;
-      transformedRow.ot_multiplier = 1.5;
-      
-      return transformedRow;
-    });
-    
-    const validRows = transformed.filter((_, index) => 
-      !errors.some(error => error.row === index + 2)
-    );
-    
-    const errorRows = transformed.filter((_, index) => 
-      errors.some(error => error.row === index + 2)
-    );
-    
-    return {
-      validationResults: {
-        errors,
-        warnings,
-        validRows: validRows.length,
-        errorRows: errorRows.length,
-        totalRows: transformed.length,
-        duplicateEmployeeIds: Array.from(duplicateEmployeeIds),
-        duplicateEmails: Array.from(duplicateEmails)
-      },
-      transformedData: transformed
+      transformedData: previewData
     };
   }, [parsedFile.data, mapping, companyCode, isUnion]);
 
-  const canProceed = validationResults.errors.length === 0;
+  const canProceed = validationResults.isValid;
 
   return (
     <div className="space-y-6">
@@ -151,76 +124,82 @@ export function EmployeeImportPreview({
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-success">{validationResults.validRows}</p>
-            <p className="text-sm text-muted-foreground">Valid</p>
+            <p className="text-sm text-muted-foreground">Valid Rows</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-destructive">{validationResults.errorRows}</p>
-            <p className="text-sm text-muted-foreground">Errors</p>
+            <p className="text-sm text-muted-foreground">Error Rows</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-warning">{validationResults.warnings.length}</p>
-            <p className="text-sm text-muted-foreground">Warnings</p>
+            <p className="text-2xl font-bold text-warning">{validationResults.warningRows}</p>
+            <p className="text-sm text-muted-foreground">Warning Rows</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Configuration Summary */}
+      {/* Import Configuration */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
+        <CardHeader>
+          <CardTitle>Import Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <h3 className="font-medium">Import Configuration</h3>
-              <p className="text-sm text-muted-foreground">
-                Company Code: {companyCode} • {isUnion ? 'Union' : 'Non-Union'} employees
-              </p>
+              <span className="font-medium">Company Code:</span> {companyCode}
             </div>
-            <Badge variant={canProceed ? "default" : "destructive"}>
-              {canProceed ? "Ready to Import" : "Has Errors"}
-            </Badge>
+            <div>
+              <span className="font-medium">Union Employees:</span> {isUnion ? 'Yes' : 'No'}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Validation Errors */}
-      {validationResults.errors.length > 0 && (
+      {/* Validation Alerts */}
+      {validationResults.errorRows > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="w-4 h-4" />
           <AlertDescription>
-            Found {validationResults.errors.length} validation errors that must be fixed before import.
+            {validationResults.errorRows} rows have validation errors and will be skipped during import.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Validation Warnings */}
-      {validationResults.warnings.length > 0 && (
+      {validationResults.warningRows > 0 && (
         <Alert>
           <AlertCircle className="w-4 h-4" />
           <AlertDescription>
-            Found {validationResults.warnings.length} warnings. Import can proceed but please review.
+            {validationResults.warningRows} rows have warnings but will be imported.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Duplicate Employee IDs */}
-      {validationResults.duplicateEmployeeIds.length > 0 && (
+      {validationResults.duplicateIds.length > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="w-4 h-4" />
           <AlertDescription>
-            Duplicate Employee IDs found: {validationResults.duplicateEmployeeIds.join(', ')}
+            Duplicate Employee IDs found: {validationResults.duplicateIds.join(', ')}
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Success Message */}
+      {validationResults.duplicateEmails.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="w-4 h-4" />
+          <AlertDescription>
+            Duplicate email addresses found: {validationResults.duplicateEmails.join(', ')}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {canProceed && (
         <Alert>
           <CheckCircle className="w-4 h-4" />
           <AlertDescription>
-            All validations passed. Ready to import {validationResults.validRows} employees.
+            All validation checks passed. Ready to import {validationResults.validRows} employees.
           </AlertDescription>
         </Alert>
       )}
@@ -235,46 +214,76 @@ export function EmployeeImportPreview({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Row</TableHead>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Province</TableHead>
-                  <TableHead>Hire Date</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="w-12">#</TableHead>
+                  {Object.entries(mapping)
+                    .filter(([_, column]) => column)
+                    .slice(0, 8) // Show first 8 mapped fields
+                    .map(([field, column]) => (
+                      <TableHead key={field} className="min-w-32">
+                        <div>
+                          <div className="font-medium">
+                            {EMPLOYEE_FIELDS[field as keyof typeof EMPLOYEE_FIELDS]?.label || field}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{column}</div>
+                        </div>
+                      </TableHead>
+                    ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transformedData.slice(0, 10).map((row, index) => {
-                  const hasError = validationResults.errors.some(error => error.row === row._rowIndex);
-                  return (
-                    <TableRow key={index} className={hasError ? "bg-destructive/5" : ""}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {row._rowIndex}
-                          {hasError && <AlertCircle className="w-4 h-4 text-destructive" />}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono">{row.employee_number || '—'}</TableCell>
-                      <TableCell>{`${row.first_name || ''} ${row.last_name || ''}`.trim() || '—'}</TableCell>
-                      <TableCell>{row.email || '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{row.province_code || '—'}</Badge>
-                      </TableCell>
-                      <TableCell>{row.hire_date || '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant={hasError ? "destructive" : "default"}>
-                          {hasError ? "Error" : "Valid"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {transformedData.map((row, index) => (
+                  <TableRow 
+                    key={index} 
+                    className={row._hasError ? "bg-destructive/10" : ""}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {row._rowIndex}
+                        {row._hasError && (
+                          <Badge variant="destructive" className="text-xs">Error</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    {Object.entries(mapping)
+                      .filter(([_, column]) => column)
+                      .slice(0, 8)
+                      .map(([field, _]) => (
+                        <TableCell key={field} className="text-sm">
+                          {row[field] !== undefined ? String(row[field]) : '—'}
+                        </TableCell>
+                      ))}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
+      {/* Error Details */}
+      {validationResults.errors.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-destructive">Validation Errors</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {validationResults.errors.slice(0, 20).map((error, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <Badge variant="destructive" className="text-xs">Row {error.row}</Badge>
+                  <span className="font-medium">{error.field}:</span>
+                  <span>{error.message}</span>
+                </div>
+              ))}
+              {validationResults.errors.length > 20 && (
+                <div className="text-sm text-muted-foreground">
+                  ... and {validationResults.errors.length - 20} more errors
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex justify-between">
@@ -283,11 +292,11 @@ export function EmployeeImportPreview({
           Back to Mapping
         </Button>
         <Button 
-          onClick={onImportStart}
+          onClick={onImportStart} 
           disabled={!canProceed}
-          className="bg-gradient-primary"
+          className="gap-2"
         >
-          <Upload className="w-4 h-4 mr-2" />
+          <Upload className="w-4 h-4" />
           Import {validationResults.validRows} Employees
         </Button>
       </div>
