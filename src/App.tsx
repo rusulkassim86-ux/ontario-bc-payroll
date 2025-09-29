@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import WorkforceProfile from "./pages/WorkforceProfile";
 import { AppLayout } from "./components/layout/AppLayout";
 import { AuthProvider } from "./components/auth/AuthProvider";
@@ -27,8 +27,8 @@ import PunchConfig from "./pages/PunchConfig";
 import Devices from "./pages/Devices";
 import DevRoutes from "./pages/DevRoutes";
 import NotFound from "./pages/NotFound";
-import CRAIntegration from "./pages/CRAIntegration";
-import AdminCodes from "./pages/AdminCodes";
+const AdminCodes = lazy(() => import('@/pages/AdminCodes'));
+const CRAIntegration = lazy(() => import('@/pages/CRAIntegration'));
 import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 import { PortalApp } from "./portal/PortalApp";
@@ -94,8 +94,16 @@ const App = () => (
             <Route path="/hire/new" element={<QuickHire />} />
             <Route path="/punch-config" element={<PunchConfig />} />
             <Route path="/dev/routes" element={<DevRoutes />} />
-              <Route path="/admin/codes" element={<AdminCodes />} />
-              <Route path="/admin/cra-integration" element={<CRAIntegration />} />
+              <Route path="/admin/codes" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <AdminCodes />
+                </Suspense>
+              } />
+              <Route path="/admin/cra-integration" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <CRAIntegration />
+                </Suspense>
+              } />
             
             {/* Portal routes */}
             <Route path="/portal/*" element={<PortalApp />} />
