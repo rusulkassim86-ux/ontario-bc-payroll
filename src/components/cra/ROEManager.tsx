@@ -75,7 +75,7 @@ export function ROEManager() {
     }
   };
 
-  const terminatedEmployees = employees.filter(emp => emp.status === 'Terminated');
+  const terminatedEmployees = employees.filter(emp => emp.status === 'terminated');
 
   return (
     <div className="space-y-6">
@@ -118,7 +118,7 @@ export function ROEManager() {
                       <SelectContent>
                         {terminatedEmployees.map((employee) => (
                           <SelectItem key={employee.id} value={employee.id}>
-                            {employee.id} - {employee.firstName} {employee.lastName}
+                            {employee.employee_number} - {employee.first_name} {employee.last_name}
                           </SelectItem>
                         ))}
                       </SelectContent>

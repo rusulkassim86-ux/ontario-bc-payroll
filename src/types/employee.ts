@@ -1,72 +1,72 @@
-// Workforce Profile - Employee Data Model
+// Employee interface matching the database schema
 export interface Employee {
-  // Core Identity
   id: string;
-  firstName: string;
-  lastName: string;
-  preferredName?: string;
-  status: 'Active' | 'Inactive' | 'Terminated' | 'Leave' | 'Pending';
-  avatarUrl?: string;
-  
-  // Position & Identification
-  positionId: string;
-  sin: string; // Store raw securely
-  sinMasked: string; // For UI display (XXX XX3 575)
-  rehireDate?: string;
-  
-  // Job Information
-  jobTitle: string;
-  department?: string;
-  businessUnit?: string;
-  location?: string;
-  benefitsEligibilityClass?: string;
-  unionCode?: string;
-  unionLocal?: string;
-  homeDepartment?: string;
-  homeCostNumber?: string;
-  reportsTo?: string;
-  positionStartDate?: string;
-  managementPosition: boolean;
-  jobFunction?: string;
-  workerCategory?: string;
-  payGrade?: string;
-  
-  // Employment Dates
-  hireDate: string;
-  leaveReturnDate?: string;
-  leaveReturnReason?: string;
-  rehireReason?: string;
-  
-  // Compensation
+  company_id: string;
+  worksite_id: string;
+  union_id?: string;
+  cba_id?: string;
+  step?: number;
+  hire_date: string;
+  termination_date?: string;
+  address: any;
+  td1_federal: any;
+  td1_provincial: any;
+  cpp_exempt: boolean;
+  ei_exempt: boolean;
+  created_at: string;
+  updated_at: string;
+  fte_hours_per_week?: number;
+  reports_to_id?: string;
+  overtime_eligible?: boolean;
+  ot_multiplier?: number;
+  vacation_policy_id?: string;
+  seniority_date?: string;
+  permit_expiry?: string;
+  probation_end?: string;
+  management_position?: boolean;
   salary?: number;
-  annualSalary?: number;
-  payFrequency: 'weekly' | 'biweekly' | 'semimonthly' | 'monthly';
+  annual_salary?: number;
   rate2?: number;
-  standardHours?: number;
-  premiumRateFactor: number;
-  
-  // Schedule & FTE
-  fte: number;
-  assignedShift: string;
-  scheduledHours: number;
-  
-  // Time Off & Accruals
-  earlyRetirementDate?: string;
-  adjustedServiceDate?: string;
-  retirementDate?: string;
-  includeInPayroll: boolean;
-  accrualDate?: string;
-  defaultStartTime: string;
-  defaultRequestHours: number;
-  
-  // Flexible Data
-  customFields: Record<string, string>;
-  additionalEarnings: AdditionalEarning[];
-  auditLog: AuditEntry[];
-  
-  // Timestamps
-  createdAt: string;
-  updatedAt: string;
+  standard_hours?: number;
+  premium_rate_factor?: number;
+  fte?: number;
+  scheduled_hours?: number;
+  accrual_date?: string;
+  default_request_hours?: number;
+  position_start_date?: string;
+  rehire_date?: string;
+  leave_return_date?: string;
+  job_function?: string;
+  worker_category?: string;
+  pay_grade?: string;
+  pay_frequency?: string;
+  business_unit?: string;
+  location?: string;
+  benefits_eligibility_class?: string;
+  union_code?: string;
+  union_local?: string;
+  home_department?: string;
+  home_cost_number?: string;
+  assigned_shift?: string;
+  default_start_time?: string;
+  employee_number: string;
+  first_name: string;
+  last_name: string;
+  sin_encrypted?: string;
+  province_code: string;
+  classification?: string;
+  leave_return_reason?: string;
+  email?: string;
+  phone?: string;
+  rehire_reason?: string;
+  banking_info_encrypted?: string;
+  status: string;
+  gl_cost_center?: string;
+  work_eligibility?: string;
+  td1_federal_status?: string;
+  td1_provincial_status?: string;
+  company_code?: string;
+  job_title?: string;
 }
 
 // Legacy Employee interface for backward compatibility

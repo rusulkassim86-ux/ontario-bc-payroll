@@ -9,7 +9,7 @@ import { EmployeeProfileHeader } from '@/components/workforce/EmployeeProfileHea
 import { EmploymentTab } from '@/components/workforce/EmploymentTab';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import { Employee, LegacyEmployee, UserRole, AdditionalEarning } from '@/types/employee';
-import { legacyToWorkforceEmployee } from '@/utils/employeeMapper';
+import { validateEmployee } from '@/utils/employeeMapper';
 
 // Mock user role - in real app this would come from auth context
 const mockUserRole: UserRole = {

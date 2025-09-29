@@ -2,299 +2,297 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Edit, 
-  CalendarIcon, 
-  Clock, 
+  Plus,
+  Eye,
   DollarSign, 
   Building, 
   Users, 
-  Plus,
-  MoreHorizontal 
+  Clock,
+  CalendarIcon,
+  FileText 
 } from 'lucide-react';
-import { Employee, UserRole, AdditionalEarning } from '@/types/employee';
+import { Employee } from '@/types/employee';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 interface EmploymentTabProps {
   employee: Employee;
-  userRole: UserRole;
-  onEditPosition: () => void;
-  onEditStatus: () => void;
-  onEditPay: () => void;
-  onEditCorporateGroups: () => void;
-  onEditWorkSchedule: () => void;
-  onEditTimeOff: () => void;
-  onEditCustomField: (field: string) => void;
-  onAddCustomField: () => void;
-  onViewEarning: (earning: AdditionalEarning) => void;
-  onAddEarning: () => void;
 }
 
-export function EmploymentTab({
-  employee,
-  userRole,
-  onEditPosition,
-  onEditStatus,
-  onEditPay,
-  onEditCorporateGroups,
-  onEditWorkSchedule,
-  onEditTimeOff,
-  onEditCustomField,
-  onAddCustomField,
-  onViewEarning,
-  onAddEarning
-}: EmploymentTabProps) {
-  const [asOfDate, setAsOfDate] = useState<Date>(new Date());
-
-  const FieldCard = ({ 
-    title, 
-    icon: Icon, 
-    onEdit, 
-    children, 
-    editable = true 
-  }: { 
-    title: string; 
-    icon: any; 
-    onEdit?: () => void; 
-    children: React.ReactNode;
-    editable?: boolean;
-  }) => (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center text-sm font-semibold text-gray-900">
-            <Icon className="mr-2 h-4 w-4 text-blue-600" />
-            {title}
-          </CardTitle>
-          {editable && onEdit && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onEdit}
-              className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-            >
-              <Edit className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {children}
-      </CardContent>
-    </Card>
-  );
-
-  const FieldRow = ({ label, value, sensitive = false }: { 
-    label: string; 
-    value: any; 
-    sensitive?: boolean;
-  }) => {
-    const displayValue = value != null ? String(value) : 'Not specified';
-    const shouldHide = sensitive && !userRole.permissions.canEditPay;
-    
-    return (
-      <div className="flex justify-between py-1">
-        <span className="text-xs text-gray-500 font-medium">{label}</span>
-        <span className="text-sm text-gray-900 font-medium">
-          {shouldHide ? '••••••' : displayValue}
-        </span>
-      </div>
-    );
-  };
+export function EmploymentTab({ employee }: EmploymentTabProps) {
+  if (!employee) return null;
 
   return (
     <div className="space-y-6">
-      {/* As Of Date Selector */}
-      <div className="flex items-center space-x-2">
-        <span className="text-sm font-medium text-gray-700">Show as of</span>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-40 justify-start text-left font-normal",
-                !asOfDate && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {asOfDate ? format(asOfDate, "MMM d, yyyy") : "Pick a date"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={asOfDate}
-              onSelect={(date) => date && setAsOfDate(date)}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Employment Cards Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Position Card */}
-        <FieldCard title="Position" icon={Users} onEdit={onEditPosition}>
-          <div className="space-y-2">
-            <FieldRow label="Job Title" value={employee.jobTitle} />
-            <FieldRow label="Reports To" value={employee.reportsTo} />
-            <FieldRow label="Position Start Date" value={employee.positionStartDate ? format(new Date(employee.positionStartDate), 'MMM d, yyyy') : null} />
-            <FieldRow label="Management Position" value={employee.managementPosition ? 'Yes' : 'No'} />
-            <FieldRow label="Job Function" value={employee.jobFunction} />
-            <FieldRow label="Worker Category" value={employee.workerCategory} />
-            <FieldRow label="Pay Grade" value={employee.payGrade} />
-          </div>
-        </FieldCard>
-
-        {/* Status Card */}
-        <FieldCard title="Status" icon={Users} onEdit={onEditStatus}>
-          <div className="space-y-2">
-            <div className="flex justify-between py-1">
-              <span className="text-xs text-gray-500 font-medium">Status</span>
-              <Badge className={cn(
-                "text-xs",
-                employee.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              )}>
-                {employee.status}
-              </Badge>
-            </div>
-            <FieldRow label="Hire Date" value={format(new Date(employee.hireDate), 'MMM d, yyyy')} />
-            <FieldRow label="Leave Return Date" value={employee.leaveReturnDate ? format(new Date(employee.leaveReturnDate), 'MMM d, yyyy') : null} />
-            <FieldRow label="Leave Return Reason" value={employee.leaveReturnReason} />
-            <FieldRow label="Rehire Date" value={employee.rehireDate ? format(new Date(employee.rehireDate), 'MMM d, yyyy') : null} />
-            <FieldRow label="Rehire Reason" value={employee.rehireReason} />
-          </div>
-        </FieldCard>
-
-        {/* Regular Pay Card */}
-        <FieldCard title="Regular Pay" icon={DollarSign} onEdit={userRole.permissions.canEditPay ? onEditPay : undefined} editable={userRole.permissions.canEditPay}>
-          <div className="space-y-2">
-            <FieldRow label="Salary" value={employee.salary ? `$${employee.salary.toLocaleString()}` : null} sensitive />
-            <FieldRow label="Annual Salary" value={employee.annualSalary ? `$${employee.annualSalary.toLocaleString()}` : null} sensitive />
-            <FieldRow label="Premium Rate Factor" value={`${employee.premiumRateFactor} × 1.0`} sensitive />
-            <FieldRow label="Pay Frequency" value={employee.payFrequency} />
-            <FieldRow label="Rate 2" value={employee.rate2 ? `$${employee.rate2}` : null} sensitive />
-            <FieldRow label="Standard Hours" value={employee.standardHours} />
-            <div className="pt-2">
-              <Button variant="outline" size="sm" className="text-xs">
-                More Rates
-              </Button>
-            </div>
-          </div>
-        </FieldCard>
-
-        {/* Corporate Groups Card */}
-        <FieldCard title="Corporate Groups" icon={Building} onEdit={onEditCorporateGroups}>
-          <div className="space-y-2">
-            <FieldRow label="Business Unit" value={employee.businessUnit} />
-            <FieldRow label="Location" value={employee.location} />
-            <FieldRow label="Benefits Eligibility Class" value={employee.benefitsEligibilityClass} />
-            <FieldRow label="Union Code" value={employee.unionCode} />
-            <FieldRow label="Union Local" value={employee.unionLocal} />
-            <FieldRow label="Home Department" value={employee.homeDepartment} />
-            <FieldRow label="Home Cost Number" value={employee.homeCostNumber} />
-          </div>
-        </FieldCard>
-
-        {/* Work Schedule Card */}
-        <FieldCard title="Work Schedule" icon={Clock} onEdit={onEditWorkSchedule}>
-          <div className="space-y-2">
-            <FieldRow label="FTE" value={employee.fte} />
-            <FieldRow label="Assigned Shift" value={employee.assignedShift} />
-            <FieldRow label="Scheduled Hours" value={employee.scheduledHours} />
-          </div>
-        </FieldCard>
-
-        {/* Time Off Card */}
-        <FieldCard title="Time Off" icon={CalendarIcon} onEdit={onEditTimeOff}>
-          <div className="space-y-2">
-            <FieldRow label="Accrual Date" value={employee.accrualDate ? format(new Date(employee.accrualDate), 'MMM d, yyyy') : null} />
-            <FieldRow label="Default Start Time" value={employee.defaultStartTime} />
-            <FieldRow label="Default Request Hours" value={employee.defaultRequestHours} />
-          </div>
-        </FieldCard>
-      </div>
-
-      {/* Custom Fields Section */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-gray-900">Custom Fields</CardTitle>
-            <Button variant="outline" size="sm" onClick={onAddCustomField}>
-              <Plus className="mr-1 h-3 w-3" />
-              Add
-            </Button>
-          </div>
+      {/* Position Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Position
+          </CardTitle>
+          <Button variant="outline" size="sm">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
         </CardHeader>
-        <CardContent className="pt-0">
-          {Object.keys(employee.customFields).length > 0 ? (
-            <div className="space-y-2">
-              {Object.entries(employee.customFields).map(([key, value]) => (
-                <div key={key} className="flex justify-between items-center py-1">
-                  <span className="text-xs text-gray-500 font-medium">{key}</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-900 font-medium">{value}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => onEditCustomField(key)}
-                      className="h-4 w-4 p-0 text-gray-400 hover:text-gray-600"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Job Title</label>
+              <div className="text-sm">{employee.job_title || 'N/A'}</div>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500">No custom fields defined</p>
-          )}
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Reports To</label>
+              <div className="text-sm">{employee.reports_to_id || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Position Start Date</label>
+              <div className="text-sm">{employee.position_start_date ? format(new Date(employee.position_start_date), 'MMM dd, yyyy') : 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Management Position</label>
+              <div className="text-sm">{employee.management_position ? 'Yes' : 'No'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Job Function</label>
+              <div className="text-sm">{employee.job_function || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Worker Category</label>
+              <div className="text-sm">{employee.worker_category || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Pay Grade</label>
+              <div className="text-sm">{employee.pay_grade || 'N/A'}</div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Additional Earnings Section */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-gray-900">Additional Earnings</CardTitle>
-            {userRole.permissions.canEditPay && (
-              <Button variant="outline" size="sm" onClick={onAddEarning}>
-                <Plus className="mr-1 h-3 w-3" />
-                Add
-              </Button>
-            )}
-          </div>
+      {/* Status Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Status
+          </CardTitle>
+          <Button variant="outline" size="sm">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
         </CardHeader>
-        <CardContent className="pt-0">
-          {employee.additionalEarnings.length > 0 ? (
-            <div className="space-y-3">
-              {employee.additionalEarnings.map((earning) => (
-                <div key={earning.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-900">{earning.type}</p>
-                    <p className="text-xs text-gray-500">
-                      ${earning.amount.toLocaleString()} • {earning.frequency}
-                      {earning.startDate && ` • Starts ${format(new Date(earning.startDate), 'MMM d, yyyy')}`}
-                    </p>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => onViewEarning(earning)}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    View
-                  </Button>
-                </div>
-              ))}
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Status</label>
+              <div className="text-sm">{employee.status}</div>
             </div>
-          ) : (
-            <p className="text-sm text-gray-500">No additional earnings defined</p>
-          )}
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Hire Date</label>
+              <div className="text-sm">{employee.hire_date ? format(new Date(employee.hire_date), 'MMM dd, yyyy') : 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Leave Return Date</label>
+              <div className="text-sm">{employee.leave_return_date ? format(new Date(employee.leave_return_date), 'MMM dd, yyyy') : 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Leave Return Reason</label>
+              <div className="text-sm">{employee.leave_return_reason || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Rehire Date</label>
+              <div className="text-sm">{employee.rehire_date ? format(new Date(employee.rehire_date), 'MMM dd, yyyy') : 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Rehire Reason</label>
+              <div className="text-sm">{employee.rehire_reason || 'N/A'}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Regular Pay Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <DollarSign className="w-5 h-5" />
+            Regular Pay
+          </CardTitle>
+          <Button variant="outline" size="sm">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Salary</label>
+              <div className="text-sm">${employee.salary?.toLocaleString() || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Annual Salary</label>
+              <div className="text-sm">${employee.annual_salary?.toLocaleString() || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Premium Rate Factors</label>
+              <div className="text-sm">{employee.premium_rate_factor || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Pay Frequency</label>
+              <div className="text-sm">{employee.pay_frequency || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Standard Hours</label>
+              <div className="text-sm">{employee.standard_hours || 'N/A'}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Corporate Groups Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Building className="w-5 h-5" />
+            Corporate Groups
+          </CardTitle>
+          <Button variant="outline" size="sm">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Change Reason</label>
+              <div className="text-sm">N/A</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Business Unit</label>
+              <div className="text-sm">{employee.business_unit || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Location</label>
+              <div className="text-sm">{employee.location || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Benefits Eligibility Class</label>
+              <div className="text-sm">{employee.benefits_eligibility_class || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Union Code</label>
+              <div className="text-sm">{employee.union_code || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Union Local</label>
+              <div className="text-sm">{employee.union_local || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Home Department</label>
+              <div className="text-sm">{employee.home_department || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Home Cost Number</label>
+              <div className="text-sm">{employee.home_cost_number || 'N/A'}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Work Schedule Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Work Schedule
+          </CardTitle>
+          <Button variant="outline" size="sm">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">FTE</label>
+              <div className="text-sm">{employee.fte || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Assigned Shift</label>
+              <div className="text-sm">{employee.assigned_shift || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Scheduled Hours</label>
+              <div className="text-sm">{employee.scheduled_hours || 'N/A'}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Time Off Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CalendarIcon className="w-5 h-5" />
+            Time Off
+          </CardTitle>
+          <Button variant="outline" size="sm">
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Accrual Date</label>
+              <div className="text-sm">{employee.accrual_date ? format(new Date(employee.accrual_date), 'MMM dd, yyyy') : 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Default Start Time</label>
+              <div className="text-sm">{employee.default_start_time || 'N/A'}</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Default Request Hours</label>
+              <div className="text-sm">{employee.default_request_hours || 'N/A'}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Custom Fields Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">Custom Fields</CardTitle>
+          <Button variant="outline" size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Field
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No custom fields added</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Additional Earnings Card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">Additional Earnings</CardTitle>
+          <Button variant="outline" size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Earning
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <DollarSign className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>No additional earnings configured</p>
+          </div>
         </CardContent>
       </Card>
     </div>
