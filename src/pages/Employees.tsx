@@ -41,23 +41,23 @@ export default function Employees() {
   const filteredEmployees = employees.filter(emp => {
     // Search filter
     const searchMatch = 
-      emp.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.employee_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+      emp.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
 
     if (!searchMatch) return false;
 
     // Union filter (based on prefix)
     if (filterUnion && filterUnion !== "all") {
-      if (filterUnion === "72S" && !emp.company_code?.startsWith('72S')) return false;
-      if (filterUnion === "72R" && !emp.company_code?.startsWith('72R')) return false;
-      if (filterUnion === "other" && emp.company_code?.startsWith('72')) return false;
+      if (filterUnion === "72S" && !emp.businessUnit?.startsWith('72S')) return false;
+      if (filterUnion === "72R" && !emp.businessUnit?.startsWith('72R')) return false;
+      if (filterUnion === "other" && emp.businessUnit?.startsWith('72')) return false;
     }
 
     // Province filter
     if (filterProvince && filterProvince !== "all") {
-      if (emp.province_code !== filterProvince) return false;
+      if (emp.location !== filterProvince) return false;
     }
 
     // Status filter
@@ -142,7 +142,7 @@ export default function Employees() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold">{employees.filter(e => e.status === 'active').length}</p>
+                <p className="text-2xl font-bold">{employees.filter(e => e.status === 'Active').length}</p>
               </div>
             </div>
           </CardContent>
@@ -156,7 +156,7 @@ export default function Employees() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Union (72S)</p>
-                <p className="text-2xl font-bold">{employees.filter(e => e.company_code?.startsWith('72S')).length}</p>
+                <p className="text-2xl font-bold">{employees.filter(e => e.businessUnit?.startsWith('72S')).length}</p>
               </div>
             </div>
           </CardContent>
@@ -170,7 +170,7 @@ export default function Employees() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Non-Union (72R)</p>
-                <p className="text-2xl font-bold">{employees.filter(e => e.company_code?.startsWith('72R')).length}</p>
+                <p className="text-2xl font-bold">{employees.filter(e => e.businessUnit?.startsWith('72R')).length}</p>
               </div>
             </div>
           </CardContent>
@@ -316,7 +316,7 @@ export default function Employees() {
                   </TableRow>
                 ) : (
                   filteredEmployees.map((employee) => {
-                    const unionType = getUnionType(employee.company_code);
+                    const unionType = getUnionType(employee.businessUnit);
                     
                     return (
                       <TableRow 
@@ -327,29 +327,29 @@ export default function Employees() {
                         <TableCell>
                           <Avatar className="w-8 h-8">
                             <AvatarFallback className="text-xs">
-                              {employee.first_name[0]}{employee.last_name[0]}
+                              {employee.firstName[0]}{employee.lastName[0]}
                             </AvatarFallback>
                           </Avatar>
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{employee.first_name} {employee.last_name}</div>
-                            <div className="text-sm text-muted-foreground">{employee.job_title || 'No title'}</div>
+                            <div className="font-medium">{employee.firstName} {employee.lastName}</div>
+                            <div className="text-sm text-muted-foreground">{employee.jobTitle || 'No title'}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">{employee.employee_number}</TableCell>
+                        <TableCell className="font-mono text-sm">{employee.id}</TableCell>
                         <TableCell>
                           <Badge className={cn("text-xs", unionType.color)}>
-                            {employee.company_code}
+                            {employee.businessUnit}
                           </Badge>
                         </TableCell>
-                        <TableCell>{employee.province_code}</TableCell>
+                        <TableCell>{employee.location}</TableCell>
                         <TableCell>
                           <Badge className={cn("text-xs", getStatusColor(employee.status))}>
                             {employee.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{employee.pay_frequency || 'Biweekly'}</TableCell>
+                        <TableCell>{employee.payFrequency || 'Biweekly'}</TableCell>
                         <TableCell>{formatCurrency(employee.salary)}</TableCell>
                         <TableCell>
                           <DropdownMenu>
