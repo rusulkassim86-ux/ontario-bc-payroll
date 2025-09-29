@@ -34,53 +34,10 @@ import {
   Plus,
   ChevronDown
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useEmployeeProfile } from "@/hooks/useEmployeeProfile";
+import { Employee } from "@/types/employee";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
-interface EmployeeData {
-  id: string;
-  employee_number: string;
-  first_name: string;
-  last_name: string;
-  status: string;
-  sin_encrypted?: string;
-  hire_date: string;
-  rehire_date?: string;
-  province_code: string;
-  company_code: string;
-  email?: string;
-  phone?: string;
-  address?: any;
-  reports_to_id?: string;
-  position_start_date?: string;
-  job_title?: string;
-  job_function?: string;
-  worker_category?: string;
-  pay_grade?: string;
-  management_position?: boolean;
-  salary?: number;
-  annual_salary?: number;
-  pay_frequency?: string;
-  rate2?: number;
-  standard_hours?: number;
-  premium_rate_factor?: number;
-  business_unit?: string;
-  location?: string;
-  benefits_eligibility_class?: string;
-  union_code?: string;
-  union_local?: string;
-  home_department?: string;
-  home_cost_number?: string;
-  fte?: number;
-  assigned_shift?: string;
-  scheduled_hours?: number;
-  accrual_date?: string;
-  default_start_time?: string;
-  default_request_hours?: number;
-  reports_to?: any;
-}
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
@@ -90,36 +47,38 @@ export default function EmployeeProfile() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [editingSection, setEditingSection] = useState<string | null>(null);
 
-  // Fetch employee details
-  const { data: employee, isLoading: employeeLoading } = useQuery({
-    queryKey: ['employee', id],
-    queryFn: async () => {
-      if (!id) throw new Error('Employee ID required');
-      
-      const { data, error } = await supabase
-        .from('employees')
-        .select(`
-          *,
-          reports_to:employees!employees_reports_to_id_fkey(
-            first_name,
-            last_name,
-            employee_number
-          )
-        `)
-        .eq('id', id)
-        .single();
+  // Use the enhanced employee profile hook
+  const {
+    employee,
+    additionalEarnings,
+    customFields,
+    rates,
+    payHistory,
+    yearEndSummary,
+    t4Summary,
+    isLoading,
+    error,
+    updateEmployee,
+    addAdditionalEarning,
+    addCustomField,
+    exportEmployeeData
+  } = useEmployeeProfile(id || '');
 
-      if (error) throw error;
-      return data as EmployeeData;
-    },
-    enabled: !!id,
-  });
-
-  if (employeeLoading || !employee) {
+  if (isLoading || !employee) {
     return (
       <div className="min-h-screen bg-muted/20 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-8">Loading employee profile...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-muted/20 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-8 text-red-600">Error loading employee: {error.message}</div>
         </div>
       </div>
     );
@@ -231,11 +190,11 @@ export default function EmployeeProfile() {
                     <Plus className="w-4 h-4 mr-2" />
                     Add custom field
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportEmployeeData('pdf')}>
                     <Download className="w-4 h-4 mr-2" />
                     Export PDF
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => exportEmployeeData('excel')}>
                     <Printer className="w-4 h-4 mr-2" />
                     Print
                   </DropdownMenuItem>
@@ -331,8 +290,8 @@ export default function EmployeeProfile() {
                   <div>
                     <Label className="text-xs text-muted-foreground">Reports To</Label>
                     <p className="text-sm">
-                      {employee.reports_to ? 
-                        `${employee.reports_to.first_name} ${employee.reports_to.last_name}` : 
+                      {employee.reports_to && Array.isArray(employee.reports_to) && employee.reports_to.length > 0 ? 
+                        `${employee.reports_to[0].first_name} ${employee.reports_to[0].last_name}` : 
                         'Not specified'
                       }
                     </p>
@@ -393,11 +352,16 @@ export default function EmployeeProfile() {
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Leave Return Date</Label>
-                    <p className="text-sm">Not applicable</p>
+                    <p className="text-sm">
+                      {employee.leave_return_date ? 
+                        format(new Date(employee.leave_return_date), 'MMM dd, yyyy') : 
+                        'Not applicable'
+                      }
+                    </p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Leave Return Reason</Label>
-                    <p className="text-sm">Not applicable</p>
+                    <p className="text-sm">{employee.leave_return_reason || 'Not applicable'}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Rehire Date</Label>
@@ -410,7 +374,7 @@ export default function EmployeeProfile() {
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Rehire Reason</Label>
-                    <p className="text-sm">N/A</p>
+                    <p className="text-sm">{employee.rehire_reason || 'N/A'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -590,11 +554,20 @@ export default function EmployeeProfile() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {customFields && customFields.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {customFields.map((field) => (
+                      <div key={field.id} className="p-3 border rounded-lg">
+                        <Label className="text-xs text-muted-foreground">{field.field_name}</Label>
+                        <p className="text-sm">{field.field_value || 'Not set'}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                   <div className="p-4 border rounded-lg text-center text-muted-foreground">
                     No custom fields defined
                   </div>
-                </div>
+                )}
                 <Button variant="outline" size="sm" className="mt-4">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Custom Field
@@ -625,11 +598,33 @@ export default function EmployeeProfile() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        No additional earnings defined
-                      </TableCell>
-                    </TableRow>
+                    {additionalEarnings && additionalEarnings.length > 0 ? (
+                      additionalEarnings.map((earning) => (
+                        <TableRow key={earning.id}>
+                          <TableCell>{earning.earning_type}</TableCell>
+                          <TableCell>{formatCurrency(earning.amount)}</TableCell>
+                          <TableCell>{earning.frequency}</TableCell>
+                          <TableCell>
+                            {earning.start_date ? format(new Date(earning.start_date), 'MMM dd, yyyy') : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {earning.end_date ? format(new Date(earning.end_date), 'MMM dd, yyyy') : 'Ongoing'}
+                          </TableCell>
+                          <TableCell>{earning.notes || 'None'}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          No additional earnings defined
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

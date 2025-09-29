@@ -102,7 +102,22 @@ export interface Employee {
   updated_at: string;
   
   // Relations
-  reports_to?: Employee;
+  reports_to?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    employee_number: string;
+  } | {
+    id: string;
+    first_name: string;
+    last_name: string;
+    employee_number: string;
+  }[];
+  vacation_policy?: {
+    id: string;
+    name: string;
+    accrual_rate_pct: number;
+  };
   additional_earnings?: EmployeeAdditionalEarning[];
   custom_fields?: EmployeeCustomField[];
 }

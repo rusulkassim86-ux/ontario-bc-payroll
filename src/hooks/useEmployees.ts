@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Employee, EmployeeAdditionalEarning, EmployeeCustomField } from '@/types/employee';
 
 export interface VacationPolicy {
   id: string;
@@ -34,49 +35,7 @@ export interface EmployeeDocument {
   downloaded_count: number;
 }
 
-export interface Employee {
-  id: string;
-  employee_number: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone?: string;
-  hire_date: string;
-  termination_date?: string;
-  status: 'active' | 'inactive' | 'terminated';
-  worksite_id: string;
-  company_id: string;
-  union_id?: string;
-  cba_id?: string;
-  classification?: string;
-  step?: number;
-  province_code: string;
-  address: Record<string, any>;
-  sin_encrypted?: string;
-  banking_info_encrypted?: string;
-  td1_federal: Record<string, any>;
-  td1_provincial: Record<string, any>;
-  cpp_exempt: boolean;
-  ei_exempt: boolean;
-  
-  // New fields
-  fte_hours_per_week: number;
-  reports_to_id?: string;
-  gl_cost_center?: string;
-  overtime_eligible: boolean;
-  ot_multiplier: number;
-  vacation_policy_id?: string;
-  seniority_date?: string;
-  work_eligibility?: 'Citizen' | 'PR' | 'WorkPermit' | 'Other';
-  permit_expiry?: string;
-  td1_federal_status: 'Pending' | 'Received';
-  td1_provincial_status: 'Pending' | 'Received';
-  probation_end?: string;
-  company_code: string;
-  
-  created_at: string;
-  updated_at: string;
-}
+// Employee interface now imported from types/employee.ts
 
 export interface NewHireFormData {
   // Step 1: Basic Info
@@ -166,7 +125,7 @@ export function useEmployees() {
           .order('employee_number');
 
         if (error) throw error;
-        return data as Employee[];
+        return data as any as Employee[];
       },
     });
   };
