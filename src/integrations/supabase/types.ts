@@ -364,6 +364,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cra_audit: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          employee_id: string
+          error_message: string | null
+          id: string
+          operation: string
+          request_data: Json
+          response_meta: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms: number
+          employee_id: string
+          error_message?: string | null
+          id?: string
+          operation: string
+          request_data?: Json
+          response_meta?: Json
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          employee_id?: string
+          error_message?: string | null
+          id?: string
+          operation?: string
+          request_data?: Json
+          response_meta?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cra_compliance_log: {
         Row: {
           company_id: string

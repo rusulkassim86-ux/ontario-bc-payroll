@@ -33,6 +33,7 @@ const menuGroups = {
   "Administration": [
     { title: "Company", url: "/company", icon: Building2 },
     { title: "Codes Management", url: "/admin/codes", icon: Code },
+    { title: "CRA Integration", url: "/admin/cra-integration", icon: Settings },
     { title: "User Management", url: "/user-management", icon: UserCog },
     { title: "Devices", url: "/devices", icon: Monitor },
     { title: "Device Mapping", url: "/device-mapping", icon: Smartphone },
@@ -82,9 +83,9 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
         ))}
       </SidebarContent>
 
