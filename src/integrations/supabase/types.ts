@@ -926,6 +926,56 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_additional_earnings: {
+        Row: {
+          amount: number
+          created_at: string | null
+          earning_type: string
+          employee_id: string
+          end_date: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          start_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          earning_type: string
+          employee_id: string
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          start_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          earning_type?: string
+          employee_id?: string
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          start_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_additional_earnings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_allowed_paycodes: {
         Row: {
           active: boolean
@@ -1052,6 +1102,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "employee_contacts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_custom_fields: {
+        Row: {
+          created_at: string | null
+          employee_id: string
+          field_name: string
+          field_type: string | null
+          field_value: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id: string
+          field_name: string
+          field_type?: string | null
+          field_value?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string
+          field_name?: string
+          field_type?: string | null
+          field_value?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_custom_fields_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
@@ -1221,32 +1309,58 @@ export type Database = {
       }
       employees: {
         Row: {
+          accrual_date: string | null
           address: Json
+          annual_salary: number | null
+          assigned_shift: string | null
           banking_info_encrypted: string | null
+          benefits_eligibility_class: string | null
+          business_unit: string | null
           cba_id: string | null
           classification: string | null
           company_code: string | null
           company_id: string
           cpp_exempt: boolean
           created_at: string
+          default_request_hours: number | null
+          default_start_time: string | null
           ei_exempt: boolean
           email: string | null
           employee_number: string
           first_name: string
+          fte: number | null
           fte_hours_per_week: number | null
           gl_cost_center: string | null
           hire_date: string
+          home_cost_number: string | null
+          home_department: string | null
           id: string
+          job_function: string | null
+          job_title: string | null
           last_name: string
+          leave_return_date: string | null
+          leave_return_reason: string | null
+          location: string | null
+          management_position: boolean | null
           ot_multiplier: number | null
           overtime_eligible: boolean | null
+          pay_frequency: string | null
+          pay_grade: string | null
           permit_expiry: string | null
           phone: string | null
+          position_start_date: string | null
+          premium_rate_factor: number | null
           probation_end: string | null
           province_code: string
+          rate2: number | null
+          rehire_date: string | null
+          rehire_reason: string | null
           reports_to_id: string | null
+          salary: number | null
+          scheduled_hours: number | null
           seniority_date: string | null
           sin_encrypted: string | null
+          standard_hours: number | null
           status: string
           step: number | null
           td1_federal: Json
@@ -1254,39 +1368,68 @@ export type Database = {
           td1_provincial: Json
           td1_provincial_status: string | null
           termination_date: string | null
+          union_code: string | null
           union_id: string | null
+          union_local: string | null
           updated_at: string
           vacation_policy_id: string | null
           work_eligibility: string | null
+          worker_category: string | null
           worksite_id: string
         }
         Insert: {
+          accrual_date?: string | null
           address?: Json
+          annual_salary?: number | null
+          assigned_shift?: string | null
           banking_info_encrypted?: string | null
+          benefits_eligibility_class?: string | null
+          business_unit?: string | null
           cba_id?: string | null
           classification?: string | null
           company_code?: string | null
           company_id: string
           cpp_exempt?: boolean
           created_at?: string
+          default_request_hours?: number | null
+          default_start_time?: string | null
           ei_exempt?: boolean
           email?: string | null
           employee_number: string
           first_name: string
+          fte?: number | null
           fte_hours_per_week?: number | null
           gl_cost_center?: string | null
           hire_date: string
+          home_cost_number?: string | null
+          home_department?: string | null
           id?: string
+          job_function?: string | null
+          job_title?: string | null
           last_name: string
+          leave_return_date?: string | null
+          leave_return_reason?: string | null
+          location?: string | null
+          management_position?: boolean | null
           ot_multiplier?: number | null
           overtime_eligible?: boolean | null
+          pay_frequency?: string | null
+          pay_grade?: string | null
           permit_expiry?: string | null
           phone?: string | null
+          position_start_date?: string | null
+          premium_rate_factor?: number | null
           probation_end?: string | null
           province_code: string
+          rate2?: number | null
+          rehire_date?: string | null
+          rehire_reason?: string | null
           reports_to_id?: string | null
+          salary?: number | null
+          scheduled_hours?: number | null
           seniority_date?: string | null
           sin_encrypted?: string | null
+          standard_hours?: number | null
           status?: string
           step?: number | null
           td1_federal?: Json
@@ -1294,39 +1437,68 @@ export type Database = {
           td1_provincial?: Json
           td1_provincial_status?: string | null
           termination_date?: string | null
+          union_code?: string | null
           union_id?: string | null
+          union_local?: string | null
           updated_at?: string
           vacation_policy_id?: string | null
           work_eligibility?: string | null
+          worker_category?: string | null
           worksite_id: string
         }
         Update: {
+          accrual_date?: string | null
           address?: Json
+          annual_salary?: number | null
+          assigned_shift?: string | null
           banking_info_encrypted?: string | null
+          benefits_eligibility_class?: string | null
+          business_unit?: string | null
           cba_id?: string | null
           classification?: string | null
           company_code?: string | null
           company_id?: string
           cpp_exempt?: boolean
           created_at?: string
+          default_request_hours?: number | null
+          default_start_time?: string | null
           ei_exempt?: boolean
           email?: string | null
           employee_number?: string
           first_name?: string
+          fte?: number | null
           fte_hours_per_week?: number | null
           gl_cost_center?: string | null
           hire_date?: string
+          home_cost_number?: string | null
+          home_department?: string | null
           id?: string
+          job_function?: string | null
+          job_title?: string | null
           last_name?: string
+          leave_return_date?: string | null
+          leave_return_reason?: string | null
+          location?: string | null
+          management_position?: boolean | null
           ot_multiplier?: number | null
           overtime_eligible?: boolean | null
+          pay_frequency?: string | null
+          pay_grade?: string | null
           permit_expiry?: string | null
           phone?: string | null
+          position_start_date?: string | null
+          premium_rate_factor?: number | null
           probation_end?: string | null
           province_code?: string
+          rate2?: number | null
+          rehire_date?: string | null
+          rehire_reason?: string | null
           reports_to_id?: string | null
+          salary?: number | null
+          scheduled_hours?: number | null
           seniority_date?: string | null
           sin_encrypted?: string | null
+          standard_hours?: number | null
           status?: string
           step?: number | null
           td1_federal?: Json
@@ -1334,10 +1506,13 @@ export type Database = {
           td1_provincial?: Json
           td1_provincial_status?: string | null
           termination_date?: string | null
+          union_code?: string | null
           union_id?: string | null
+          union_local?: string | null
           updated_at?: string
           vacation_policy_id?: string | null
           work_eligibility?: string | null
+          worker_category?: string | null
           worksite_id?: string
         }
         Relationships: [
