@@ -11,7 +11,7 @@ import { PayProfileTab } from './tabs/PayProfileTab';
 import { BenefitsTab } from './tabs/BenefitsTab';
 import { StatutoryComplianceTab } from './tabs/StatutoryComplianceTab';
 import { AccumulatorsTab } from './tabs/AccumulatorsTab';
-import { TimecardsTab } from './tabs/TimecardsTab';
+import { ADPTimecardModule } from '@/components/timecards/ADPTimecardModule';
 
 interface ADPEmployeeProfileProps {
   employeeId: string;
@@ -199,9 +199,7 @@ export function ADPEmployeeProfile({ employeeId, onClose }: ADPEmployeeProfilePr
           </TabsContent>
 
           <TabsContent value="timecards" className="space-y-4">
-            <TimecardsTab 
-              employee={employee} 
-            />
+            <ADPTimecardModule employeeId={employee.id} />
           </TabsContent>
         </Tabs>
       </CardContent>
