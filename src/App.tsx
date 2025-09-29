@@ -27,6 +27,7 @@ import PunchConfig from "./pages/PunchConfig";
 import Devices from "./pages/Devices";
 import DevRoutes from "./pages/DevRoutes";
 import NotFound from "./pages/NotFound";
+import AdminCodes from "./pages/AdminCodes";
 import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 import { PortalApp } from "./portal/PortalApp";
@@ -92,6 +93,7 @@ const App = () => (
             <Route path="/hire/new" element={<QuickHire />} />
             <Route path="/punch-config" element={<PunchConfig />} />
             <Route path="/dev/routes" element={<DevRoutes />} />
+            <Route path="/admin/codes" element={<AdminCodes />} />
             
             {/* Portal routes */}
             <Route path="/portal/*" element={<PortalApp />} />

@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { LegacyEmployee } from '@/types/employee';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { CostCenterSelector } from '@/components/admin/CostCenterSelector';
+import { DeductionCodesList } from '@/components/admin/DeductionCodesList';
 
 interface EmploymentTabProps {
   employee: LegacyEmployee;
@@ -255,12 +257,14 @@ export function EmploymentTab({ employee, isEditing, editData, onFieldChange }: 
             <div className="space-y-2">
               <Label>Cost Center</Label>
               {isEditing ? (
-                <Input
-                  value={currentData.home_cost_number || ''}
-                  onChange={(e) => onFieldChange('home_cost_number', e.target.value)}
+                <CostCenterSelector
+                  value={currentData.cost_center_code || ''}
+                  onChange={(value) => onFieldChange('cost_center_code', value)}
                 />
               ) : (
-                <div className="p-2 bg-muted rounded text-sm">{employee.home_cost_number || 'Not specified'}</div>
+                <div className="p-2 bg-muted rounded text-sm font-mono">
+                  {(employee as any).cost_center_code || 'Not specified'}
+                </div>
               )}
             </div>
             <div className="space-y-2">
@@ -294,10 +298,47 @@ export function EmploymentTab({ employee, isEditing, editData, onFieldChange }: 
         </CardContent>
       </Card>
 
+      {/* Corporate Groups Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Corporate Groups</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Union Type</Label>
+              {isEditing ? (
+                <Select value={(currentData as any).union_type || ''} onValueChange={(value) => onFieldChange('union_type', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select union" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="UNIFOR">UNIFOR</SelectItem>
+                    <SelectItem value="PSAC">PSAC</SelectItem>
+                    <SelectItem value="NonUnion">Non-Union</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="p-2 bg-muted rounded text-sm">{(employee as any).union_type || '—'}</div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Employee Group</Label>
+              <div className="p-2 bg-muted rounded text-sm">{(employee as any).employee_group || '—'}</div>
+            </div>
+            <div className="space-y-2">
+              <Label>Prefix Codes (Deduction Codes)</Label>
+              <DeductionCodesList employeeId={employee.id} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Union Information Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Union Information</CardTitle>
+          <CardTitle className="text-lg">Legacy Union Information</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

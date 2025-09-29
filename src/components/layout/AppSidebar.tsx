@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus, Code } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -32,6 +32,7 @@ const menuGroups = {
   ],
   "Administration": [
     { title: "Company", url: "/company", icon: Building2 },
+    { title: "Codes Management", url: "/admin/codes", icon: Code },
     { title: "User Management", url: "/user-management", icon: UserCog },
     { title: "Devices", url: "/devices", icon: Monitor },
     { title: "Device Mapping", url: "/device-mapping", icon: Smartphone },

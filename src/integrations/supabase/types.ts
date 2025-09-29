@@ -280,6 +280,39 @@ export type Database = {
         }
         Relationships: []
       }
+      cost_centers: {
+        Row: {
+          active: boolean
+          code: string
+          company_id: string
+          created_at: string
+          department: string | null
+          location_province: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          company_id: string
+          created_at?: string
+          department?: string | null
+          location_province?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          company_id?: string
+          created_at?: string
+          department?: string | null
+          location_province?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cpp_ei_rules: {
         Row: {
           cpp_basic_exemption: number
@@ -619,8 +652,10 @@ export type Database = {
       }
       deduction_codes: {
         Row: {
+          active: boolean | null
           calc_type: string
           cap: number | null
+          category: string | null
           code: string
           company_id: string
           created_at: string
@@ -628,13 +663,18 @@ export type Database = {
           id: string
           is_cpp_reduction: boolean
           is_ei_reduction: boolean
+          is_employer_contribution: boolean | null
           is_taxable_reduction: boolean
+          label: string | null
+          maps_to: string | null
           rate: number | null
           updated_at: string
         }
         Insert: {
+          active?: boolean | null
           calc_type?: string
           cap?: number | null
+          category?: string | null
           code: string
           company_id: string
           created_at?: string
@@ -642,13 +682,18 @@ export type Database = {
           id?: string
           is_cpp_reduction?: boolean
           is_ei_reduction?: boolean
+          is_employer_contribution?: boolean | null
           is_taxable_reduction?: boolean
+          label?: string | null
+          maps_to?: string | null
           rate?: number | null
           updated_at?: string
         }
         Update: {
+          active?: boolean | null
           calc_type?: string
           cap?: number | null
+          category?: string | null
           code?: string
           company_id?: string
           created_at?: string
@@ -656,7 +701,10 @@ export type Database = {
           id?: string
           is_cpp_reduction?: boolean
           is_ei_reduction?: boolean
+          is_employer_contribution?: boolean | null
           is_taxable_reduction?: boolean
+          label?: string | null
+          maps_to?: string | null
           rate?: number | null
           updated_at?: string
         }
@@ -1147,6 +1195,39 @@ export type Database = {
           },
         ]
       }
+      employee_deduction_codes: {
+        Row: {
+          amount: number | null
+          created_at: string
+          deduction_code: string
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          deduction_code: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          deduction_code?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_documents: {
         Row: {
           created_at: string | null
@@ -1320,12 +1401,14 @@ export type Database = {
           classification: string | null
           company_code: string | null
           company_id: string
+          cost_center_code: string | null
           cpp_exempt: boolean
           created_at: string
           default_request_hours: number | null
           default_start_time: string | null
           ei_exempt: boolean
           email: string | null
+          employee_group: string | null
           employee_number: string
           first_name: string
           fte: number | null
@@ -1371,6 +1454,7 @@ export type Database = {
           union_code: string | null
           union_id: string | null
           union_local: string | null
+          union_type: string | null
           updated_at: string
           vacation_policy_id: string | null
           work_eligibility: string | null
@@ -1389,12 +1473,14 @@ export type Database = {
           classification?: string | null
           company_code?: string | null
           company_id: string
+          cost_center_code?: string | null
           cpp_exempt?: boolean
           created_at?: string
           default_request_hours?: number | null
           default_start_time?: string | null
           ei_exempt?: boolean
           email?: string | null
+          employee_group?: string | null
           employee_number: string
           first_name: string
           fte?: number | null
@@ -1440,6 +1526,7 @@ export type Database = {
           union_code?: string | null
           union_id?: string | null
           union_local?: string | null
+          union_type?: string | null
           updated_at?: string
           vacation_policy_id?: string | null
           work_eligibility?: string | null
@@ -1458,12 +1545,14 @@ export type Database = {
           classification?: string | null
           company_code?: string | null
           company_id?: string
+          cost_center_code?: string | null
           cpp_exempt?: boolean
           created_at?: string
           default_request_hours?: number | null
           default_start_time?: string | null
           ei_exempt?: boolean
           email?: string | null
+          employee_group?: string | null
           employee_number?: string
           first_name?: string
           fte?: number | null
@@ -1509,6 +1598,7 @@ export type Database = {
           union_code?: string | null
           union_id?: string | null
           union_local?: string | null
+          union_type?: string | null
           updated_at?: string
           vacation_policy_id?: string | null
           work_eligibility?: string | null
