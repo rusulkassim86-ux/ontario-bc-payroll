@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Employee, EmployeeAdditionalEarning, EmployeeCustomField, T4Summary, ExportOptions } from "@/types/employee";
+import { LegacyEmployee, EmployeeAdditionalEarning, EmployeeCustomField, T4Summary, ExportOptions } from "@/types/employee";
 import { useToast } from "@/hooks/use-toast";
 
 // Enhanced useEmployees hook with ADP-style functionality
@@ -28,7 +28,7 @@ export function useEmployeeProfile(employeeId: string) {
         .maybeSingle();
 
       if (error) throw error;
-      return data as any as Employee;
+      return data as any as LegacyEmployee;
     },
     enabled: !!employeeId,
   });
@@ -136,7 +136,7 @@ export function useEmployeeProfile(employeeId: string) {
   });
 
   // Update employee function
-  const updateEmployee = async (updates: Partial<Employee>) => {
+  const updateEmployee = async (updates: Partial<LegacyEmployee>) => {
     try {
       const { error } = await supabase
         .from('employees')
