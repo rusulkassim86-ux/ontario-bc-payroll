@@ -102,7 +102,10 @@ export function ADPTimecardModule({ employeeId }: ADPTimecardModuleProps) {
 
   const handleCellEdit = (id: string, field: string, value: string) => {
     setTimecardEntries(prev => prev.map(entry => 
-      entry.id === id ? { ...entry, [field]: value } : entry
+      entry.id === id ? { 
+        ...entry, 
+        [field]: field === 'hours' ? parseFloat(value) || 0 : value 
+      } : entry
     ));
     setEditingCell(null);
   };
