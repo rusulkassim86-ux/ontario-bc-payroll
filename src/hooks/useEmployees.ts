@@ -110,7 +110,7 @@ export function useEmployees() {
           .from('employees')
           .select(`
             *,
-            reports_to:employees!employees_reports_to_id_fkey(
+            manager:employees!reports_to_id(
               id,
               first_name,
               last_name,

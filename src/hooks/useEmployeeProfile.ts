@@ -17,7 +17,7 @@ export function useEmployeeProfile(employeeId: string) {
         .from('employees')
         .select(`
           *,
-          reports_to:employees!employees_reports_to_id_fkey(
+          manager:employees!reports_to_id(
             id,
             first_name,
             last_name,
@@ -25,7 +25,7 @@ export function useEmployeeProfile(employeeId: string) {
           )
         `)
         .eq('id', employeeId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data as any as Employee;

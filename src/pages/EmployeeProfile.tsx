@@ -290,8 +290,8 @@ export default function EmployeeProfile() {
                   <div>
                     <Label className="text-xs text-muted-foreground">Reports To</Label>
                     <p className="text-sm">
-                      {employee.reports_to && Array.isArray(employee.reports_to) && employee.reports_to.length > 0 ? 
-                        `${employee.reports_to[0].first_name} ${employee.reports_to[0].last_name}` : 
+                      {employee.manager ? 
+                        `${employee.manager.first_name} ${employee.manager.last_name}` : 
                         'Not specified'
                       }
                     </p>
