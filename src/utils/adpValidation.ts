@@ -57,6 +57,30 @@ export function normalizeDate(dateValue: any): NormalizationResult {
 
   const rawValue = String(dateValue).trim();
   
+  // Check for Excel date serial (numeric values between 20,000 and 50,000)
+  const numericValue = parseFloat(rawValue);
+  if (!isNaN(numericValue) && numericValue >= 20000 && numericValue <= 50000) {
+    // Convert Excel date serial to JavaScript Date
+    // Excel counts days since January 1, 1900, but has a leap year bug
+    // JavaScript Date epoch is January 1, 1970 (25569 days after Excel epoch)
+    const excelEpochDiff = 25569; // Days between 1900-01-01 and 1970-01-01
+    const msPerDay = 86400 * 1000; // Milliseconds per day
+    
+    // Account for Excel's leap year bug (treats 1900 as leap year)
+    const adjustedSerial = numericValue > 59 ? numericValue - 1 : numericValue;
+    const jsTimestamp = (adjustedSerial - excelEpochDiff) * msPerDay;
+    
+    const excelDate = new Date(jsTimestamp);
+    if (!isNaN(excelDate.getTime())) {
+      const isoString = excelDate.toISOString().split('T')[0];
+      return {
+        raw: rawValue,
+        normalized: isoString,
+        hasChanged: true // Always true for Excel serials since format changes
+      };
+    }
+  }
+  
   // Try parsing various date formats
   const dateFormats = [
     // DD/MM/YYYY, DD-MM-YYYY
