@@ -75,8 +75,8 @@ export function EmployeeProfileHeader({
         {/* Right side info */}
         <div className="text-right space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Position ID:</span>
-            <span className="font-mono">{employee.id}</span>
+            <span className="text-sm text-muted-foreground">Employee ID:</span>
+            <span className="font-mono">{employee.employee_number}</span>
           </div>
           
           <div className="flex items-center gap-2">

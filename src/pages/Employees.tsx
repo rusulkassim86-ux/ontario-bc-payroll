@@ -24,6 +24,7 @@ import {
 import { useEmployees } from "@/hooks/useEmployees";
 import { NewHireForm } from "@/components/employees/NewHireForm";
 import { BulkEmployeeImport } from "@/components/employees/BulkEmployeeImport";
+import { InlineEmployeeProfile } from "@/components/employees/InlineEmployeeProfile";
 import { cn } from "@/lib/utils";
 
 export default function Employees() {
@@ -34,6 +35,7 @@ export default function Employees() {
   const [filterUnion, setFilterUnion] = useState("all");
   const [showNewHireForm, setShowNewHireForm] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const { useEmployeesList } = useEmployees();
   const { data: employees = [], isLoading, error } = useEmployeesList();
 
@@ -93,7 +95,7 @@ export default function Employees() {
   };
 
   const handleRowClick = (employeeId: string) => {
-    window.open(`/employees/${employeeId}`, '_blank');
+    setSelectedEmployeeId(employeeId);
   };
 
   if (isLoading) {
@@ -117,6 +119,14 @@ export default function Employees() {
   return (
     <div className="space-y-6">
       <PageHeader title="Employee Directory" />
+
+      {/* Inline Employee Profile */}
+      {selectedEmployeeId && (
+        <InlineEmployeeProfile 
+          employeeId={selectedEmployeeId} 
+          onClose={() => setSelectedEmployeeId(null)}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
