@@ -30,6 +30,7 @@ import NotFound from "./pages/NotFound";
 import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 import { PortalApp } from "./portal/PortalApp";
+import QuickHire from "./pages/QuickHire";
 
 const queryClient = new QueryClient();
 
@@ -44,7 +45,7 @@ console.table([
   { path: "/payroll", component: "Payroll" },
   { path: "/pay-codes-master", component: "PayCodesMasterPage" },
   { path: "/reports", component: "Reports" },
-  { path: "/cra-remittances", component: "CRARemittances" },
+  { path: "/hire/new", component: "QuickHire" },
   { path: "/security-center", component: "SecurityCenter" },
   { path: "/backup-restore", component: "BackupRestore" },
   { path: "/device-mapping", component: "DeviceMapping" },
@@ -88,6 +89,7 @@ const App = () => (
             <Route path="/device-mapping" element={<DeviceMapping />} />
             <Route path="/punch-feed" element={<PunchFeed />} />
             <Route path="/devices" element={<Devices />} />
+            <Route path="/hire/new" element={<QuickHire />} />
             <Route path="/punch-config" element={<PunchConfig />} />
             <Route path="/dev/routes" element={<DevRoutes />} />
             

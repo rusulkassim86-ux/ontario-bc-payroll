@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -17,6 +17,7 @@ import { useLocation } from "react-router-dom";
 const menuGroups = {
   "Main": [
     { title: "Dashboard", url: "/", icon: Home },
+    { title: "Quick Hire", url: "/hire/new", icon: UserPlus },
     { title: "Employees", url: "/employees", icon: Users },
     { title: "Timesheets", url: "/timesheets", icon: Clock },
   ],
