@@ -142,6 +142,9 @@ export interface LegacyEmployee {
   // Status fields
   status: 'active' | 'inactive' | 'terminated';
   company_code?: string;
+  gl_cost_center?: string;
+  td1_federal_status?: string;
+  td1_provincial_status?: string;
   
   // Timestamps
   created_at: string;
@@ -251,6 +254,12 @@ export interface PayRunLine {
   deductions: any;
   ytd_totals: any;
   created_at: string;
+  pay_run?: {
+    pay_calendar?: {
+      period_start: string;
+      period_end: string;
+    };
+  };
 }
 
 export interface YearEndSummary {
