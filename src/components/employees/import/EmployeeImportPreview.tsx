@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertCircle, CheckCircle, ArrowLeft, Upload } from "lucide-react";
 import type { ParsedFile } from "@/hooks/useFileParser";
-import { validateEmployeeData, findDuplicateEmployees } from "@/utils/adpValidation";
+import { validateEmployeeData, findDuplicateEmployees, normalizeDate, normalizeProvince, normalizeName } from "@/utils/adpValidation";
 import { EMPLOYEE_FIELDS } from "@/hooks/useFileParser";
 
 interface EmployeeImportPreviewProps {
@@ -31,43 +31,72 @@ export function EmployeeImportPreview({
     const validation = validateEmployeeData(parsedFile.data, mapping);
     const duplicates = findDuplicateEmployees(parsedFile.data, mapping);
     
-    // Transform data for preview
+    // Transform data for preview with normalization
     const previewData = parsedFile.data.slice(0, 10).map((row, index) => {
       const transformedRow: Record<string, any> = { 
         _rowIndex: index + 2,
-        _hasError: validation.errors.some(error => error.row === index + 2)
+        _hasError: validation.errors.some(error => error.row === index + 2),
+        _normalizations: {} // Store normalization results for display
       };
       
-      // Apply mappings
+      // Apply mappings with normalization
       Object.entries(mapping).forEach(([field, column]) => {
         if (column && row[column] !== undefined) {
           let value = row[column];
           
-          // Basic transformations for display
+          // Apply normalization based on field type
           switch (field) {
             case 'full_name':
-              // Split full name for display
               if (value && !mapping.first_name && !mapping.last_name) {
-                const parts = String(value).trim().split(/\s+/);
-                transformedRow.first_name = parts[0] || '';
-                transformedRow.last_name = parts.slice(1).join(' ') || '';
+                const nameResult = normalizeName(value);
+                transformedRow.first_name = nameResult.firstName;
+                transformedRow.last_name = nameResult.lastName;
+                if (nameResult.hasChanged) {
+                  transformedRow._normalizations.full_name = {
+                    raw: nameResult.raw,
+                    normalized: nameResult.normalized
+                  };
+                }
               }
               break;
             case 'province_code':
-              transformedRow[field] = String(value).trim().toUpperCase();
+              if (value) {
+                const provinceResult = normalizeProvince(value);
+                transformedRow[field] = provinceResult.normalized || String(value).trim().toUpperCase();
+                if (provinceResult.hasChanged) {
+                  transformedRow._normalizations[field] = {
+                    raw: provinceResult.raw,
+                    normalized: provinceResult.normalized
+                  };
+                }
+              }
               break;
             case 'hire_date':
             case 'birth_date':
               if (value) {
-                const date = new Date(value);
-                if (!isNaN(date.getTime())) {
-                  transformedRow[field] = date.toISOString().split('T')[0];
+                const dateResult = normalizeDate(value);
+                if (dateResult.normalized) {
+                  transformedRow[field] = dateResult.normalized;
+                  if (dateResult.hasChanged) {
+                    transformedRow._normalizations[field] = {
+                      raw: dateResult.raw,
+                      normalized: dateResult.normalized
+                    };
+                  }
                 }
               }
               break;
             case 'sin':
               if (value) {
-                transformedRow[field] = String(value).replace(/\D/g, '');
+                const raw = String(value);
+                const normalized = raw.replace(/\D/g, '');
+                transformedRow[field] = normalized;
+                if (raw !== normalized) {
+                  transformedRow._normalizations[field] = {
+                    raw,
+                    normalized
+                  };
+                }
               }
               break;
             case 'rate':
@@ -80,7 +109,15 @@ export function EmployeeImportPreview({
               break;
             case 'postal_code':
               if (value) {
-                transformedRow[field] = String(value).replace(/\s+/g, '').toUpperCase();
+                const raw = String(value);
+                const normalized = raw.replace(/\s+/g, '').toUpperCase();
+                transformedRow[field] = normalized;
+                if (raw !== normalized) {
+                  transformedRow._normalizations[field] = {
+                    raw,
+                    normalized
+                  };
+                }
               }
               break;
             default:
@@ -208,6 +245,9 @@ export function EmployeeImportPreview({
       <Card>
         <CardHeader>
           <CardTitle>Data Preview (First 10 Rows)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Showing normalized values. Raw → Normalized changes are displayed below each field.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -249,7 +289,15 @@ export function EmployeeImportPreview({
                       .slice(0, 8)
                       .map(([field, _]) => (
                         <TableCell key={field} className="text-sm">
-                          {row[field] !== undefined ? String(row[field]) : '—'}
+                          <div>
+                            <div>{row[field] !== undefined ? String(row[field]) : '—'}</div>
+                            {row._normalizations[field] && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                <div className="text-amber-600">Raw: {row._normalizations[field].raw}</div>
+                                <div className="text-green-600">→ {row._normalizations[field].normalized}</div>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                       ))}
                   </TableRow>

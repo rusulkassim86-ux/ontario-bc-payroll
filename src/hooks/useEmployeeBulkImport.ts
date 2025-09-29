@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeDate, normalizeProvince, normalizeName } from '@/utils/adpValidation';
 
 interface ImportData {
   data: Record<string, any>[];
@@ -99,30 +100,31 @@ export function useEmployeeBulkImport() {
                     break;
 
                   case 'full_name':
-                    // Split full name into first and last name if first/last not provided
+                    // Split full name using enhanced normalization
                     if (!mapping.first_name || !mapping.last_name) {
-                      const nameParts = String(value).trim().split(/\s+/);
-                      if (!mapping.first_name && nameParts.length > 0) {
-                        employeeData.first_name = nameParts[0];
+                      const nameResult = normalizeName(value);
+                      if (!mapping.first_name && nameResult.firstName) {
+                        employeeData.first_name = nameResult.firstName;
                       }
-                      if (!mapping.last_name && nameParts.length > 1) {
-                        employeeData.last_name = nameParts.slice(1).join(' ');
+                      if (!mapping.last_name && nameResult.lastName) {
+                        employeeData.last_name = nameResult.lastName;
                       }
                     }
                     break;
 
                   case 'province_code':
-                    employeeData[field] = String(value).trim().toUpperCase();
+                    const provinceResult = normalizeProvince(value);
+                    employeeData[field] = provinceResult.normalized || String(value).trim().toUpperCase();
                     break;
 
                   case 'hire_date':
                   case 'birth_date':
                     if (value) {
-                      const date = new Date(value);
-                      if (!isNaN(date.getTime())) {
-                        employeeData[field === 'birth_date' ? field : 'hire_date'] = date.toISOString().split('T')[0];
+                      const dateResult = normalizeDate(value);
+                      if (dateResult.normalized) {
+                        employeeData[field === 'birth_date' ? field : 'hire_date'] = dateResult.normalized;
                         if (field === 'hire_date') {
-                          employeeData.seniority_date = employeeData.hire_date; // Default seniority to hire date
+                          employeeData.seniority_date = dateResult.normalized; // Default seniority to hire date
                         }
                       }
                     }
