@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Calculator, 
   FileText, 
@@ -28,6 +31,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { usePayrollCalculation } from "@/hooks/usePayrollCalculation";
+import { runPayrollForEmployee, savePayrollRun, type PayrollPeriod, type PayrollRunResult } from "@/services/runPayroll";
+import { getPayrollCalculator } from "@/payroll";
 import { format } from "date-fns";
 
 const mockPayrollRuns = [
@@ -68,6 +73,81 @@ const mockPayrollRuns = [
 
 export default function Payroll() {
   const [activeTab, setActiveTab] = useState("current");
+  const [runPayrollOpen, setRunPayrollOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<PayrollPeriod>({
+    start: format(new Date(), 'yyyy-MM-dd'),
+    end: format(new Date(), 'yyyy-MM-dd'),
+    frequency: 'Biweekly'
+  });
+  const [payrollResults, setPayrollResults] = useState<PayrollRunResult[]>([]);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [isLocalFallback, setIsLocalFallback] = useState(false);
+  const { toast } = useToast();
+
+  const handleCalculatePayroll = async () => {
+    setIsCalculating(true);
+    try {
+      // For demo, we'll use mock employee data
+      const mockEmployees = [
+        { id: '1', name: 'John Doe', grossPay: 2500 },
+        { id: '2', name: 'Jane Smith', grossPay: 3000 },
+        { id: '3', name: 'Mike Johnson', grossPay: 2750 }
+      ];
+
+      // Check if using local fallback
+      const calculator = getPayrollCalculator();
+      const isLocal = calculator.constructor.name === 'LocalCraProvider';
+      setIsLocalFallback(isLocal);
+
+      const results: PayrollRunResult[] = [];
+      
+      for (const employee of mockEmployees) {
+        try {
+          const result = await runPayrollForEmployee(
+            employee.id,
+            selectedPeriod,
+            employee.grossPay
+          );
+          results.push(result);
+        } catch (error) {
+          console.error(`Failed to calculate payroll for employee ${employee.id}:`, error);
+        }
+      }
+
+      setPayrollResults(results);
+      
+      toast({
+        title: "Payroll Calculated",
+        description: `Successfully calculated payroll for ${results.length} employees`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Calculation Failed",
+        description: "Failed to calculate payroll. Please try again.",
+      });
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  const handlePostPayroll = async () => {
+    if (payrollResults.length === 0) return;
+    
+    try {
+      const runId = await savePayrollRun(payrollResults);
+      
+      toast({
+        title: "Payroll Posted",
+        description: `Payroll run ${runId} has been posted successfully`,
+      });
+      
+      setRunPayrollOpen(false);
+      setPayrollResults([]);
+    } catch (error) {
+      // Error handling is done in savePayrollRun
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -75,10 +155,158 @@ export default function Payroll() {
         title="Payroll" 
         description="Manage payroll runs and calculations"
         action={
-          <Button className="bg-gradient-primary">
-            <Play className="w-4 h-4 mr-2" />
-            Start New Payroll
-          </Button>
+          <Sheet open={runPayrollOpen} onOpenChange={setRunPayrollOpen}>
+            <SheetTrigger asChild>
+              <Button className="bg-gradient-primary">
+                <Play className="w-4 h-4 mr-2" />
+                Run Payroll
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[600px] sm:max-w-[600px]">
+              <SheetHeader>
+                <SheetTitle>Run Payroll</SheetTitle>
+              </SheetHeader>
+              
+              <div className="py-6 space-y-6">
+                {isLocalFallback && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      Using local CRA calculator. Connect a payroll API for production accuracy.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="period-start">Period Start</Label>
+                      <Input
+                        id="period-start"
+                        type="date"
+                        value={selectedPeriod.start}
+                        onChange={(e) => setSelectedPeriod(prev => ({ ...prev, start: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="period-end">Period End</Label>
+                      <Input
+                        id="period-end"
+                        type="date"
+                        value={selectedPeriod.end}
+                        onChange={(e) => setSelectedPeriod(prev => ({ ...prev, end: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="frequency">Pay Frequency</Label>
+                    <Select
+                      value={selectedPeriod.frequency}
+                      onValueChange={(value) => setSelectedPeriod(prev => ({ 
+                        ...prev, 
+                        frequency: value as PayrollPeriod['frequency'] 
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Weekly">Weekly</SelectItem>
+                        <SelectItem value="Biweekly">Biweekly</SelectItem>
+                        <SelectItem value="SemiMonthly">Semi-Monthly</SelectItem>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button 
+                    onClick={handleCalculatePayroll}
+                    disabled={isCalculating}
+                    className="w-full"
+                  >
+                    {isCalculating ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Calculating...
+                      </>
+                    ) : (
+                      <>
+                        <Calculator className="w-4 h-4 mr-2" />
+                        Calculate Payroll
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {payrollResults.length > 0 && (
+                  <>
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Payroll Results</h3>
+                      
+                      {/* Summary */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground">Total Gross Pay</p>
+                          <p className="text-xl font-bold">
+                            ${payrollResults.reduce((sum, r) => sum + r.summary.gross, 0).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-sm text-muted-foreground">Total Net Pay</p>
+                          <p className="text-xl font-bold">
+                            ${payrollResults.reduce((sum, r) => sum + r.netPay, 0).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Detailed Breakdown */}
+                      <div className="space-y-3">
+                        {payrollResults.map((result) => (
+                          <Card key={result.employeeId} className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-medium">Employee {result.employeeId}</h4>
+                              <Badge variant="outline">${result.netPay.toLocaleString()}</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">CPP:</span> ${result.deductions.cpp}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">EI:</span> ${result.deductions.ei}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Fed Tax:</span> ${result.deductions.fedTax}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Prov Tax:</span> ${result.deductions.provTax}
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button variant="outline" className="flex-1">
+                          <FileText className="w-4 h-4 mr-2" />
+                          Export PDF
+                        </Button>
+                        <Button 
+                          onClick={handlePostPayroll}
+                          className="flex-1 bg-success text-success-foreground"
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Post Payroll
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         }
       />
       
