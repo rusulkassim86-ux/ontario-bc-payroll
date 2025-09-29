@@ -24,6 +24,7 @@ import { ComplianceStep } from "./steps/ComplianceStep";
 import { BankingStep } from "./steps/BankingStep";
 import { DocumentsStep } from "./steps/DocumentsStep";
 import { useEmployees, type NewHireFormData } from "@/hooks/useEmployees";
+import { Form } from "@/components/ui/form";
 
 const newHireSchema = z.object({
   // Step 1: Basic Info
@@ -256,7 +257,8 @@ export function NewHireForm({ onSuccess, onCancel }: NewHireFormProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <Form {...form}>
+      <div className="max-w-4xl mx-auto space-y-6">
       {/* Progress Header */}
       <Card className="shadow-card">
         <CardHeader>
@@ -377,5 +379,6 @@ export function NewHireForm({ onSuccess, onCancel }: NewHireFormProps) {
         </CardContent>
       </Card>
     </div>
-  );
+  </Form>
+);
 }
