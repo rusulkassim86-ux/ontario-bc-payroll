@@ -1,60 +1,94 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   ArrowLeft, 
   Edit, 
   Mail, 
   Phone, 
   MapPin, 
-  Calendar,
+  Calendar as CalendarIcon,
   DollarSign,
   FileText,
-  History,
   Eye,
   EyeOff,
   Building2,
   User,
-  CreditCard
+  CreditCard,
+  MoreVertical,
+  Download,
+  Printer,
+  Plus,
+  ChevronDown
 } from "lucide-react";
-import { useEmployees } from "@/hooks/useEmployees";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
-interface EmployeeRate {
+interface EmployeeData {
   id: string;
-  base_rate: number;
-  rate_type: string;
-  effective_from: string;
-  effective_to?: string;
-}
-
-interface PayRunLine {
-  id: string;
-  gross_pay: number;
-  net_pay: number;
-  taxes: any;
-  deductions: any;
-  created_at: string;
-  pay_run: {
-    pay_calendar: {
-      period_start: string;
-      period_end: string;
-    };
-  };
+  employee_number: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  sin_encrypted?: string;
+  hire_date: string;
+  rehire_date?: string;
+  province_code: string;
+  company_code: string;
+  email?: string;
+  phone?: string;
+  address?: any;
+  reports_to_id?: string;
+  position_start_date?: string;
+  job_title?: string;
+  job_function?: string;
+  worker_category?: string;
+  pay_grade?: string;
+  management_position?: boolean;
+  salary?: number;
+  annual_salary?: number;
+  pay_frequency?: string;
+  rate2?: number;
+  standard_hours?: number;
+  premium_rate_factor?: number;
+  business_unit?: string;
+  location?: string;
+  benefits_eligibility_class?: string;
+  union_code?: string;
+  union_local?: string;
+  home_department?: string;
+  home_cost_number?: string;
+  fte?: number;
+  assigned_shift?: string;
+  scheduled_hours?: number;
+  accrual_date?: string;
+  default_start_time?: string;
+  default_request_hours?: number;
+  reports_to?: any;
 }
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [showSIN, setShowSIN] = useState(false);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("employment");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [editingSection, setEditingSection] = useState<string | null>(null);
 
   // Fetch employee details
   const { data: employee, isLoading: employeeLoading } = useQuery({
@@ -76,558 +110,619 @@ export default function EmployeeProfile() {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as EmployeeData;
     },
     enabled: !!id,
   });
-
-  // Fetch employee rates
-  const { data: rates } = useQuery({
-    queryKey: ['employee-rates', id],
-    queryFn: async () => {
-      if (!id) return [];
-      
-      const { data, error } = await supabase
-        .from('employee_rates')
-        .select('*')
-        .eq('employee_id', id)
-        .order('effective_from', { ascending: false });
-
-      if (error) throw error;
-      return data as EmployeeRate[];
-    },
-    enabled: !!id,
-  });
-
-  // Fetch pay history
-  const { data: payHistory } = useQuery({
-    queryKey: ['pay-history', id],
-    queryFn: async () => {
-      if (!id) return [];
-      
-      const { data, error } = await supabase
-        .from('pay_run_lines')
-        .select(`
-          *,
-          pay_run:pay_runs(
-            pay_calendar:pay_calendars(
-              period_start,
-              period_end
-            )
-          )
-        `)
-        .eq('employee_id', id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      return data as PayRunLine[];
-    },
-    enabled: !!id,
-  });
-
-  // Fetch year-end summary
-  const { data: yearEndSummary } = useQuery({
-    queryKey: ['year-end-summary', id],
-    queryFn: async () => {
-      if (!id) return null;
-      
-      const currentYear = new Date().getFullYear();
-      const { data, error } = await supabase
-        .from('employee_year_end_summary')
-        .select('*')
-        .eq('employee_id', id)
-        .eq('tax_year', currentYear)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    },
-    enabled: !!id,
-  });
-
-  const currentRate = rates?.[0];
-  const latestPayStub = payHistory?.[0];
 
   if (employeeLoading || !employee) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/employees')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Employees
-          </Button>
+      <div className="min-h-screen bg-muted/20 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-8">Loading employee profile...</div>
         </div>
-        <div className="text-center py-8">Loading employee profile...</div>
       </div>
     );
   }
 
-  const formatCurrency = (amount: number) => 
-    new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(amount);
+  const formatCurrency = (amount?: number) => 
+    amount ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(amount) : 'Not set';
 
   const formatSIN = (sin?: string) => {
     if (!sin) return 'Not provided';
-    if (!showSIN) return '***-***-' + sin.slice(-3);
+    if (!showSIN) return 'XXX-XX-' + sin.slice(-3);
     return sin.replace(/(\d{3})(\d{3})(\d{3})/, '$1-$2-$3');
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'leave': return 'bg-yellow-100 text-yellow-800';
+      case 'terminated': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const EditModal = ({ section, title, children }: { section: string; title: string; children: React.ReactNode }) => (
+    <Dialog open={editingSection === section} onOpenChange={() => setEditingSection(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit {title}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {children}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setEditingSection(null)}>Cancel</Button>
+            <Button onClick={() => setEditingSection(null)}>Save</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-muted/20">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/employees')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Employees
-          </Button>
-          <div className="flex items-center gap-3">
-            <Avatar className="w-12 h-12">
-              <AvatarFallback className="text-lg">
-                {employee.first_name[0]}{employee.last_name[0]}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-2xl font-bold">{employee.first_name} {employee.last_name}</h1>
-              <p className="text-muted-foreground">ID: {employee.employee_number}</p>
+      <div className="bg-background border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/employees')}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16">
+                  <AvatarFallback className="text-xl font-medium">
+                    {employee.first_name[0]}{employee.last_name[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-semibold">{employee.first_name} {employee.last_name}</h1>
+                    <Badge className={cn("text-xs", getStatusColor(employee.status))}>
+                      {employee.status}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground">{employee.job_title || 'Position'} – {employee.home_department || 'Department'}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="text-right text-sm">
+                <div><span className="text-muted-foreground">Position ID:</span> {employee.employee_number}</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Tax ID (SIN):</span>
+                  <span className="font-mono">{formatSIN(employee.sin_encrypted)}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSIN(!showSIN)}
+                    className="h-6 w-6 p-0"
+                  >
+                    {showSIN ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  </Button>
+                </div>
+                <div><span className="text-muted-foreground">Rehire Date:</span> {employee.rehire_date ? format(new Date(employee.rehire_date), 'MMM dd, yyyy') : 'N/A'}</div>
+              </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button>
+                    Take action
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <User className="w-4 h-4 mr-2" />
+                    Change status
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Add earning
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add custom field
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Printer className="w-4 h-4 mr-2" />
+                    Print
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
-        <Button>
-          <Edit className="w-4 h-4 mr-2" />
-          Edit Profile
-        </Button>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <User className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Status</p>
-                <p className="font-medium">{employee.status}</p>
-              </div>
+      {/* Search Controls */}
+      <div className="bg-background border-b">
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Select defaultValue="active">
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">People with active status</SelectItem>
+                  <SelectItem value="all">All people</SelectItem>
+                  <SelectItem value="inactive">Inactive people</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input placeholder="Search people..." className="w-64" />
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-success/10 rounded-lg">
-                <Building2 className="w-4 h-4 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Type</p>
-                <p className="font-medium">
-                  {employee.company_code?.startsWith('72S') ? 'Union' : 'Non-Union'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-accent/10 rounded-lg">
-                <DollarSign className="w-4 h-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Base Rate</p>
-                <p className="font-medium">
-                  {currentRate ? formatCurrency(currentRate.base_rate) : 'Not set'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-warning/10 rounded-lg">
-                <CreditCard className="w-4 h-4 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Latest Gross</p>
-                <p className="font-medium">
-                  {latestPayStub ? formatCurrency(latestPayStub.gross_pay) : 'No pay history'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <div className="text-sm text-muted-foreground">1 of 1</div>
+          </div>
+        </div>
       </div>
 
-      {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="pay">Pay</TabsTrigger>
-          <TabsTrigger value="deductions">Deductions</TabsTrigger>
-          <TabsTrigger value="t4">T4 Summary</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="sticky top-[140px] bg-muted/20 z-10 -mx-6 px-6 py-2">
+            <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+              <TabsTrigger value="personal">Personal</TabsTrigger>
+              <TabsTrigger value="employment">Employment</TabsTrigger>
+              <TabsTrigger value="benefits">Benefits</TabsTrigger>
+              <TabsTrigger value="talent">Talent</TabsTrigger>
+              <TabsTrigger value="compliance">Statutory Compliance</TabsTrigger>
+            </TabsList>
+          </div>
 
-        {/* Details Tab */}
-        <TabsContent value="details" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Employment Tab */}
+          <TabsContent value="employment" className="space-y-6">
+            {/* Show as of Date */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Personal Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">First Name</label>
-                    <p className="text-sm">{employee.first_name}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Last Name</label>
-                    <p className="text-sm">{employee.last_name}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Employee ID</label>
-                  <p className="text-sm font-mono">{employee.employee_number}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Prefix Code</label>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={employee.company_code?.startsWith('72S') ? 'default' : 'secondary'}>
-                      {employee.company_code}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">SIN</label>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-mono">{formatSIN(employee.sin_encrypted)}</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowSIN(!showSIN)}
-                      className="h-6 w-6 p-0"
-                    >
-                      {showSIN ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Province</label>
-                  <p className="text-sm">{employee.province_code}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
-                  <Badge variant={employee.status === 'active' ? 'default' : 'secondary'}>
-                    {employee.status}
-                  </Badge>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Hire Date</label>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-sm">{new Date(employee.hire_date).toLocaleDateString()}</p>
-                  </div>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Show as of</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {format(selectedDate, "PPP")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-sm text-muted-foreground">(default today)</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
-                  Contact Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {employee.email && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Position */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base font-medium">Position</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingSection('position')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Email</label>
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-muted-foreground" />
-                      <p className="text-sm">{employee.email}</p>
-                    </div>
+                    <Label className="text-xs text-muted-foreground">Job Title</Label>
+                    <p className="text-sm">{employee.job_title || 'Not specified'}</p>
                   </div>
-                )}
-
-                {employee.phone && (
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Phone</label>
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <p className="text-sm">{employee.phone}</p>
-                    </div>
-                  </div>
-                )}
-
-                {employee.address && typeof employee.address === 'object' && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Address</label>
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      <div className="text-sm">
-                        <p>{(employee.address as any).street}</p>
-                        <p>{(employee.address as any).city}, {(employee.address as any).province}</p>
-                        <p>{(employee.address as any).postal_code}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {employee.reports_to && Array.isArray(employee.reports_to) && employee.reports_to.length > 0 && (
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Reports To</label>
+                    <Label className="text-xs text-muted-foreground">Reports To</Label>
                     <p className="text-sm">
-                      {employee.reports_to[0].first_name} {employee.reports_to[0].last_name} 
-                      <span className="text-muted-foreground ml-1">({employee.reports_to[0].employee_number})</span>
+                      {employee.reports_to ? 
+                        `${employee.reports_to.first_name} ${employee.reports_to.last_name}` : 
+                        'Not specified'
+                      }
                     </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Pay Tab */}
-        <TabsContent value="pay" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pay Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Pay Frequency</label>
-                  <p className="text-sm">Biweekly</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Base Rate</label>
-                  <p className="text-sm">
-                    {currentRate ? (
-                      <>
-                        {formatCurrency(currentRate.base_rate)} 
-                        <span className="text-muted-foreground ml-1">
-                          ({currentRate.rate_type === 'hourly' ? 'hourly' : 'salary'})
-                        </span>
-                      </>
-                    ) : (
-                      'Not set'
-                    )}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Latest Gross Pay</label>
-                  <p className="text-sm">
-                    {latestPayStub ? formatCurrency(latestPayStub.gross_pay) : 'No pay history'}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Overtime Eligible</label>
-                  <Badge variant={employee.overtime_eligible ? 'default' : 'secondary'}>
-                    {employee.overtime_eligible ? 'Yes' : 'No'}
-                  </Badge>
-                </div>
-
-                {employee.overtime_eligible && (
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">OT Multiplier</label>
-                    <p className="text-sm">{employee.ot_multiplier}x</p>
+                    <Label className="text-xs text-muted-foreground">Position Start Date</Label>
+                    <p className="text-sm">
+                      {employee.position_start_date ? 
+                        format(new Date(employee.position_start_date), 'MMM dd, yyyy') : 
+                        format(new Date(employee.hire_date), 'MMM dd, yyyy')
+                      }
+                    </p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Management Position</Label>
+                    <p className="text-sm">{employee.management_position ? 'Yes' : 'No'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Job Function</Label>
+                    <p className="text-sm">{employee.job_function || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Worker Category</Label>
+                    <p className="text-sm">{employee.worker_category || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Pay Grade</Label>
+                    <p className="text-sm">{employee.pay_grade || 'Not specified'}</p>
+                  </div>
+                </CardContent>
+              </Card>
 
+              {/* Status */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base font-medium">Status</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingSection('status')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Status</Label>
+                    <div>
+                      <Badge className={cn("text-xs", getStatusColor(employee.status))}>
+                        {employee.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Hire Date</Label>
+                    <p className="text-sm">{format(new Date(employee.hire_date), 'MMM dd, yyyy')}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Leave Return Date</Label>
+                    <p className="text-sm">Not applicable</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Leave Return Reason</Label>
+                    <p className="text-sm">Not applicable</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Rehire Date</Label>
+                    <p className="text-sm">
+                      {employee.rehire_date ? 
+                        format(new Date(employee.rehire_date), 'MMM dd, yyyy') : 
+                        'N/A'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Rehire Reason</Label>
+                    <p className="text-sm">N/A</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Regular Pay */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base font-medium">Regular Pay</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingSection('pay')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Salary</Label>
+                    <p className="text-sm">{formatCurrency(employee.salary)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Annual Salary</Label>
+                    <p className="text-sm">{formatCurrency(employee.annual_salary)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Premium Rate Factors</Label>
+                    <p className="text-sm">{employee.premium_rate_factor || '1.5'} × 1.0</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Pay Frequency</Label>
+                    <p className="text-sm">{employee.pay_frequency || 'Biweekly'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Rate 2</Label>
+                    <p className="text-sm">{formatCurrency(employee.rate2)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Standard Hours</Label>
+                    <p className="text-sm">{employee.standard_hours || 'Not specified'}</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="mt-2">
+                    More Rates
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Corporate Groups */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base font-medium">Corporate Groups</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingSection('corporate')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Change Reason</Label>
+                    <p className="text-sm">New Hire</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Business Unit</Label>
+                    <p className="text-sm">{employee.business_unit || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Location</Label>
+                    <p className="text-sm">{employee.location || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Benefits Eligibility Class</Label>
+                    <p className="text-sm">{employee.benefits_eligibility_class || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Union Code</Label>
+                    <p className="text-sm">{employee.union_code || employee.company_code || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Union Local</Label>
+                    <p className="text-sm">{employee.union_local || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Home Department</Label>
+                    <p className="text-sm">{employee.home_department || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Home Cost Number</Label>
+                    <p className="text-sm">{employee.home_cost_number || 'Not specified'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Work Schedule */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base font-medium">Work Schedule</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingSection('schedule')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">FTE</Label>
+                    <p className="text-sm">{employee.fte || '1.0'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Assigned Shift</Label>
+                    <p className="text-sm">{employee.assigned_shift || 'Day Shift'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Scheduled Hours</Label>
+                    <p className="text-sm">{employee.scheduled_hours || '40.0'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Time Off */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base font-medium">Time Off</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingSection('timeoff')}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Restricted Period Calendar</Label>
+                    <p className="text-sm">Standard</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Accrual Date</Label>
+                    <p className="text-sm">
+                      {employee.accrual_date ? 
+                        format(new Date(employee.accrual_date), 'MMM dd, yyyy') : 
+                        format(new Date(employee.hire_date), 'MMM dd, yyyy')
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Default Start Time</Label>
+                    <p className="text-sm">{employee.default_start_time || '09:00'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Default Request Hours</Label>
+                    <p className="text-sm">{employee.default_request_hours || '8.0'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Custom Fields */}
             <Card>
-              <CardHeader>
-                <CardTitle>YTD Totals</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-base font-medium">Custom Fields</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setEditingSection('custom')}
+                  className="h-8 w-8 p-0"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {yearEndSummary ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Employment Income</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_employment_income)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">CPP Pensionable</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_cpp_pensionable)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">EI Insurable</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_ei_insurable)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Income Tax</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_income_tax)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No YTD data available</p>
-                )}
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border rounded-lg text-center text-muted-foreground">
+                    No custom fields defined
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="mt-4">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Custom Field
+                </Button>
               </CardContent>
             </Card>
+
+            {/* Additional Earnings */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-base font-medium">Additional Earnings</CardTitle>
+                <Button variant="outline" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Frequency</TableHead>
+                      <TableHead>Start</TableHead>
+                      <TableHead>End</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        No additional earnings defined
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Other Tabs - Placeholder */}
+          <TabsContent value="personal" className="space-y-6">
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Personal information tab content coming soon...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="benefits" className="space-y-6">
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Benefits tab content coming soon...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="talent" className="space-y-6">
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Talent tab content coming soon...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="compliance" className="space-y-6">
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Statutory compliance tab content coming soon...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Edit Modals */}
+        <EditModal section="position" title="Position">
+          <div className="space-y-4">
+            <div>
+              <Label>Job Title</Label>
+              <Input defaultValue={employee.job_title || ''} />
+            </div>
+            <div>
+              <Label>Management Position</Label>
+              <Select defaultValue={employee.management_position ? 'yes' : 'no'}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </TabsContent>
+        </EditModal>
 
-        {/* Deductions Tab */}
-        <TabsContent value="deductions" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Deductions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {latestPayStub ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">CPP Contributions</span>
-                    <span className="text-sm font-medium">
-                      {formatCurrency(latestPayStub.taxes?.cpp_employee || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">EI Premiums</span>
-                    <span className="text-sm font-medium">
-                      {formatCurrency(latestPayStub.taxes?.ei_employee || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Federal Tax</span>
-                    <span className="text-sm font-medium">
-                      {formatCurrency(latestPayStub.taxes?.federal_tax || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Provincial Tax</span>
-                    <span className="text-sm font-medium">
-                      {formatCurrency(latestPayStub.taxes?.provincial_tax || 0)}
-                    </span>
-                  </div>
-                  {employee.company_code?.startsWith('72S') && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Union Dues</span>
-                      <span className="text-sm font-medium">
-                        {formatCurrency(latestPayStub.deductions?.union_dues || 0)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No deduction history available</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <EditModal section="status" title="Status">
+          <div className="space-y-4">
+            <div>
+              <Label>Status</Label>
+              <Select defaultValue={employee.status}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="leave">Leave</SelectItem>
+                  <SelectItem value="terminated">Terminated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </EditModal>
 
-        {/* T4 Summary Tab */}
-        <TabsContent value="t4" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>T4 Summary (Current Year)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {yearEndSummary ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Box 14 - Employment Income</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_employment_income)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Box 16 - CPP Contributions</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_cpp_contributions)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Box 18 - EI Premiums</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_ei_premiums)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Box 22 - Income Tax</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_income_tax)}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Box 24 - EI Insurable Earnings</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_ei_insurable)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Box 26 - CPP Pensionable Earnings</span>
-                      <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_cpp_pensionable)}</span>
-                    </div>
-                    {yearEndSummary.total_rpp_contributions > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Box 20 - RPP Contributions</span>
-                        <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_rpp_contributions)}</span>
-                      </div>
-                    )}
-                    {yearEndSummary.total_union_dues > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Box 44 - Union Dues</span>
-                        <span className="text-sm font-medium">{formatCurrency(yearEndSummary.total_union_dues)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No T4 data available for current year</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* History Tab */}
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pay History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {payHistory && payHistory.length > 0 ? (
-                <div className="space-y-4">
-                  {payHistory.map((pay) => (
-                    <div key={pay.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">
-                          {pay.pay_run.pay_calendar && 
-                            `${new Date(pay.pay_run.pay_calendar.period_start).toLocaleDateString()} - ${new Date(pay.pay_run.pay_calendar.period_end).toLocaleDateString()}`
-                          }
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Processed: {new Date(pay.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatCurrency(pay.gross_pay)}</p>
-                        <p className="text-sm text-muted-foreground">Gross Pay</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No pay history available</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <EditModal section="pay" title="Regular Pay">
+          <div className="space-y-4">
+            <div>
+              <Label>Salary</Label>
+              <Input type="number" defaultValue={employee.salary || ''} />
+            </div>
+            <div>
+              <Label>Annual Salary</Label>
+              <Input type="number" defaultValue={employee.annual_salary || ''} />
+            </div>
+          </div>
+        </EditModal>
+      </div>
     </div>
   );
 }
