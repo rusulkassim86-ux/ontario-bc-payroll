@@ -271,7 +271,7 @@ export function EmploymentTab({ employee, isEditing, editData, onFieldChange }: 
                   onChange={(e) => onFieldChange('gl_cost_center', e.target.value)}
                 />
               ) : (
-                <div className="p-2 bg-muted rounded text-sm">{employee.gl_cost_center || 'Not specified'}</div>
+                <div className="p-2 bg-muted rounded text-sm">{(employee as any).gl_cost_center || 'Not specified'}</div>
               )}
             </div>
             <div className="space-y-2">

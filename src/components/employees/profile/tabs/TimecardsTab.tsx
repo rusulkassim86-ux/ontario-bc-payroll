@@ -332,7 +332,7 @@ export function TimecardsTab({ employee }: TimecardsTabProps) {
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Cost Center</div>
-                <div className="font-medium">{employee.gl_cost_center || 'ADM-001'}</div>
+                <div className="font-medium">{(employee as any).gl_cost_center || 'ADM-001'}</div>
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Hours</div>

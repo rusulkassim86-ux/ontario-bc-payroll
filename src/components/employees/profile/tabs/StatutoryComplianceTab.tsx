@@ -45,8 +45,8 @@ export function StatutoryComplianceTab({ employee, isEditing, editData, onFieldC
             <div className="space-y-4">
               <h4 className="font-semibold flex items-center gap-2">
                 Federal TD1 
-                <Badge variant={employee.td1_federal_status === 'completed' ? 'default' : 'secondary'}>
-                  {employee.td1_federal_status || 'Pending'}
+                <Badge variant={(employee as any).td1_federal_status === 'completed' ? 'default' : 'secondary'}>
+                  {(employee as any).td1_federal_status || 'Pending'}
                 </Badge>
               </h4>
               <div className="space-y-3">
@@ -99,8 +99,8 @@ export function StatutoryComplianceTab({ employee, isEditing, editData, onFieldC
             <div className="space-y-4">
               <h4 className="font-semibold flex items-center gap-2">
                 Provincial TD1 ({employee.province_code})
-                <Badge variant={employee.td1_provincial_status === 'completed' ? 'default' : 'secondary'}>
-                  {employee.td1_provincial_status || 'Pending'}
+                <Badge variant={(employee as any).td1_provincial_status === 'completed' ? 'default' : 'secondary'}>
+                  {(employee as any).td1_provincial_status || 'Pending'}
                 </Badge>
               </h4>
               <div className="space-y-3">

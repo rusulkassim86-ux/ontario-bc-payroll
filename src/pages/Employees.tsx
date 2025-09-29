@@ -24,7 +24,7 @@ import {
 import { useEmployees } from "@/hooks/useEmployees";
 import { NewHireForm } from "@/components/employees/NewHireForm";
 import { BulkEmployeeImport } from "@/components/employees/BulkEmployeeImport";
-import { InlineEmployeeProfile } from "@/components/employees/InlineEmployeeProfile";
+import { ADPEmployeeProfile } from "@/components/employees/profile/ADPEmployeeProfile";
 import { cn } from "@/lib/utils";
 
 export default function Employees() {
@@ -120,9 +120,9 @@ export default function Employees() {
     <div className="space-y-6">
       <PageHeader title="Employee Directory" />
 
-      {/* Inline Employee Profile */}
+      {/* ADP Employee Profile */}
       {selectedEmployeeId && (
-        <InlineEmployeeProfile 
+        <ADPEmployeeProfile 
           employeeId={selectedEmployeeId} 
           onClose={() => setSelectedEmployeeId(null)}
         />
