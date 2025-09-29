@@ -412,15 +412,15 @@ export default function Employees() {
       </Card>
 
       {/* Modals */}
-      {showNewHireForm && (
-        <NewHireForm />
-      )}
-      
       {showBulkImport && (
         <BulkEmployeeImport 
           open={showBulkImport} 
           onOpenChange={setShowBulkImport} 
         />
+      )}
+      
+      {showNewHireForm && (
+        <NewHireForm />
       )}
     </div>
   );

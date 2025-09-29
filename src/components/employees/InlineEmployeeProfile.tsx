@@ -357,21 +357,21 @@ export function InlineEmployeeProfile({ employeeId, onClose }: InlineEmployeePro
               <div className="space-y-2">
                 <Label>Work Eligibility</Label>
                 <div className="p-2 bg-muted rounded text-sm">
-                  {employee.work_eligibility || 'Not specified'}
+                  {(employee as any).work_eligibility || 'Not specified'}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>TD1 Federal Status</Label>
                 <div className="p-2 bg-muted rounded text-sm">
-                  {employee.td1_federal_status || 'Pending'}
+                  {(employee as any).td1_federal_status || 'Pending'}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>TD1 Provincial Status</Label>
                 <div className="p-2 bg-muted rounded text-sm">
-                  {employee.td1_provincial_status || 'Pending'}
+                  {(employee as any).td1_provincial_status || 'Pending'}
                 </div>
               </div>
             </div>
