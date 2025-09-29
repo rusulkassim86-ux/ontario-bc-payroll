@@ -81,15 +81,34 @@ export function useEmployeeBulkImport() {
                 // Apply field-specific transformations
                 switch (field) {
                   case 'employee_number':
-                  case 'first_name':
-                  case 'last_name':
                   case 'email':
                   case 'phone':
-                  case 'department':
-                  case 'position':
+                  case 'home_department':
+                  case 'job_title':
                   case 'classification':
                   case 'gl_cost_center':
+                  case 'business_unit':
+                  case 'location':
+                  case 'union_code':
                     employeeData[field] = String(value).trim();
+                    break;
+
+                  case 'first_name':
+                  case 'last_name':
+                    employeeData[field] = String(value).trim();
+                    break;
+
+                  case 'full_name':
+                    // Split full name into first and last name if first/last not provided
+                    if (!mapping.first_name || !mapping.last_name) {
+                      const nameParts = String(value).trim().split(/\s+/);
+                      if (!mapping.first_name && nameParts.length > 0) {
+                        employeeData.first_name = nameParts[0];
+                      }
+                      if (!mapping.last_name && nameParts.length > 1) {
+                        employeeData.last_name = nameParts.slice(1).join(' ');
+                      }
+                    }
                     break;
 
                   case 'province_code':
@@ -97,9 +116,15 @@ export function useEmployeeBulkImport() {
                     break;
 
                   case 'hire_date':
+                  case 'birth_date':
                     if (value) {
-                      employeeData[field] = new Date(value).toISOString().split('T')[0];
-                      employeeData.seniority_date = employeeData[field]; // Default seniority to hire date
+                      const date = new Date(value);
+                      if (!isNaN(date.getTime())) {
+                        employeeData[field === 'birth_date' ? field : 'hire_date'] = date.toISOString().split('T')[0];
+                        if (field === 'hire_date') {
+                          employeeData.seniority_date = employeeData.hire_date; // Default seniority to hire date
+                        }
+                      }
                     }
                     break;
 
@@ -109,28 +134,101 @@ export function useEmployeeBulkImport() {
                     }
                     break;
 
-                  case 'pay_rate':
-                  case 'fte_hours_per_week':
+                  case 'rate':
                     if (value) {
                       const numValue = parseFloat(value);
                       if (!isNaN(numValue)) {
-                        employeeData[field] = numValue;
+                        // Determine if it's salary or hourly based on rate_type or amount
+                        const rateType = mapping.rate_type ? row[mapping.rate_type] : null;
+                        if (rateType && String(rateType).toLowerCase().includes('salary')) {
+                          employeeData.annual_salary = numValue;
+                        } else {
+                          employeeData.salary = numValue; // Regular hourly rate
+                        }
                       }
                     }
                     break;
 
-                  case 'union_seniority':
-                    if (isUnion && value) {
-                      employeeData.step = parseInt(value) || null;
+                  case 'rate_type':
+                    if (value) {
+                      const rateTypeValue = String(value).toLowerCase();
+                      if (rateTypeValue.includes('salary') || rateTypeValue.includes('salaried')) {
+                        employeeData.pay_frequency = employeeData.pay_frequency || 'biweekly';
+                      }
+                    }
+                    break;
+
+                  case 'standard_hours':
+                  case 'fte':
+                    if (value) {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue)) {
+                        if (field === 'standard_hours') {
+                          employeeData.fte_hours_per_week = numValue;
+                        } else {
+                          employeeData.fte = numValue;
+                        }
+                      }
+                    }
+                    break;
+
+                  case 'status':
+                    if (value) {
+                      const statusMap: Record<string, string> = {
+                        'active': 'active',
+                        'terminated': 'terminated',
+                        'leave': 'inactive',
+                        'inactive': 'inactive'
+                      };
+                      const statusValue = String(value).toLowerCase();
+                      employeeData.status = statusMap[statusValue] || 'active';
+                    }
+                    break;
+
+                  case 'pay_frequency':
+                    if (value) {
+                      const freqMap: Record<string, string> = {
+                        'weekly': 'weekly',
+                        'biweekly': 'biweekly',
+                        'bi-weekly': 'biweekly',
+                        'semimonthly': 'semimonthly',
+                        'semi-monthly': 'semimonthly',
+                        'monthly': 'monthly'
+                      };
+                      const freqValue = String(value).toLowerCase().replace(/\s+/g, '');
+                      employeeData.pay_frequency = freqMap[freqValue] || 'biweekly';
+                    }
+                    break;
+
+                  case 'address_line1':
+                  case 'address_line2':
+                  case 'city':
+                  case 'postal_code':
+                    // Build address object
+                    if (!employeeData.address) {
+                      employeeData.address = {};
+                    }
+                    const addressField = field.replace('address_', '');
+                    employeeData.address[addressField] = String(value).trim();
+                    if (field === 'postal_code') {
+                      // Format Canadian postal code
+                      employeeData.address.postal_code = String(value).replace(/\s+/g, '').toUpperCase();
                     }
                     break;
 
                   case 'reports_to':
                     if (value) {
-                      // This would need to be resolved to an employee ID
-                      // For now, we'll store it in a metadata field
-                      employeeData.metadata = { reports_to_name: String(value) };
+                      // Store in metadata for later resolution
+                      if (!employeeData.metadata) {
+                        employeeData.metadata = {};
+                      }
+                      employeeData.metadata.reports_to_name = String(value).trim();
                     }
+                    break;
+
+                  default:
+                    // Handle any other fields generically
+                    employeeData[field] = value;
                     break;
                 }
               }

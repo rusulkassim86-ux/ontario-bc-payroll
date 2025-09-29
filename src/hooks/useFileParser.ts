@@ -114,8 +114,49 @@ export function useFileParser() {
   };
 }
 
-// Predefined mappings for common payroll systems
-export const ADP_COLUMN_MAPPINGS: Record<string, string> = {
+// Predefined mappings for ADP employee exports
+export const ADP_EMPLOYEE_MAPPINGS: Record<string, string> = {
+  'Associate ID': 'employee_number',
+  'Position ID': 'position_id',
+  'Company Code': 'company_code',
+  'Name': 'full_name',
+  'First Name': 'first_name',
+  'Last Name': 'last_name',
+  'Tax ID': 'sin',
+  'Date of Birth': 'birth_date',
+  'File #': 'file_number',
+  'File Number': 'file_number',
+  'Job Title': 'job_title',
+  'Position': 'job_title',
+  'Reports To': 'reports_to',
+  'Status': 'status',
+  'Hire Date': 'hire_date',
+  'Business Unit': 'business_unit',
+  'Location': 'location',
+  'Union Code': 'union_code',
+  'Rate Type': 'rate_type',
+  'Rate': 'rate',
+  'Currency': 'currency',
+  'Department': 'home_department',
+  'Home Department': 'home_department',
+  'Email': 'email',
+  'Work Email': 'email',
+  'Phone': 'phone',
+  'Mobile': 'phone',
+  'Address Line 1': 'address_line1',
+  'Address Line 2': 'address_line2',
+  'Address Line 3': 'address_line3',
+  'City': 'city',
+  'Province': 'province_code',
+  'Province/Territory': 'province_code',
+  'Postal Code': 'postal_code',
+  'Standard Hours': 'standard_hours',
+  'FTE': 'fte',
+  'Pay Frequency': 'pay_frequency'
+};
+
+// Legacy paycode mappings for backwards compatibility
+export const ADP_PAYCODE_MAPPINGS: Record<string, string> = {
   'Pay Code': 'code',
   'Pay Code Description': 'name',
   'Pay Code Name': 'name',
@@ -139,6 +180,37 @@ export const ADP_COLUMN_MAPPINGS: Record<string, string> = {
   'Active': 'active'
 };
 
+// Employee fields for ADP import
+export const EMPLOYEE_FIELDS = {
+  employee_number: { label: 'Associate ID', required: true, type: 'text' },
+  full_name: { label: 'Full Name', required: false, type: 'text' },
+  first_name: { label: 'First Name', required: true, type: 'text' },
+  last_name: { label: 'Last Name', required: true, type: 'text' },
+  sin: { label: 'Tax ID (SIN)', required: false, type: 'text' },
+  birth_date: { label: 'Date of Birth', required: false, type: 'date' },
+  hire_date: { label: 'Hire Date', required: true, type: 'date' },
+  job_title: { label: 'Job Title', required: false, type: 'text' },
+  home_department: { label: 'Department', required: false, type: 'text' },
+  province_code: { label: 'Province', required: true, type: 'select', options: ['ON', 'BC', 'AB', 'SK', 'MB', 'QC', 'NB', 'NS', 'PE', 'NL', 'YT', 'NT', 'NU'] },
+  status: { label: 'Status', required: false, type: 'select', options: ['Active', 'Terminated', 'Leave', 'Inactive'] },
+  rate_type: { label: 'Rate Type', required: false, type: 'select', options: ['Salaried', 'Hourly', 'Contract'] },
+  rate: { label: 'Rate', required: false, type: 'number' },
+  standard_hours: { label: 'Standard Hours', required: false, type: 'number' },
+  email: { label: 'Email', required: false, type: 'text' },
+  phone: { label: 'Phone', required: false, type: 'text' },
+  address_line1: { label: 'Address Line 1', required: false, type: 'text' },
+  address_line2: { label: 'Address Line 2', required: false, type: 'text' },
+  city: { label: 'City', required: false, type: 'text' },
+  postal_code: { label: 'Postal Code', required: false, type: 'text' },
+  business_unit: { label: 'Business Unit', required: false, type: 'text' },
+  location: { label: 'Location', required: false, type: 'text' },
+  union_code: { label: 'Union Code', required: false, type: 'text' },
+  pay_frequency: { label: 'Pay Frequency', required: false, type: 'select', options: ['Weekly', 'Biweekly', 'SemiMonthly', 'Monthly'] },
+  reports_to: { label: 'Reports To', required: false, type: 'text' },
+  fte: { label: 'FTE', required: false, type: 'number' }
+};
+
+// Legacy paycode fields for backwards compatibility
 export const PAYCODE_FIELDS = {
   code: { label: 'Pay Code', required: true, type: 'text' },
   name: { label: 'Name', required: true, type: 'text' },
@@ -161,6 +233,64 @@ export const PAYCODE_FIELDS = {
   active: { label: 'Active', required: false, type: 'boolean' }
 };
 
+// Auto-detect mapping for employee import
+export function autoDetectEmployeeMapping(headers: string[]): ColumnMapping {
+  const mapping: ColumnMapping = {};
+  
+  Object.keys(EMPLOYEE_FIELDS).forEach(field => {
+    mapping[field] = null;
+  });
+
+  // Try exact matches first
+  headers.forEach(header => {
+    const normalizedHeader = header.trim();
+    const mappedField = ADP_EMPLOYEE_MAPPINGS[normalizedHeader];
+    if (mappedField && mapping[mappedField] === null) {
+      mapping[mappedField] = header;
+    }
+  });
+
+  // Try fuzzy matches for common variations
+  headers.forEach(header => {
+    const lower = header.toLowerCase().trim();
+    
+    if (!mapping.employee_number && (lower.includes('associate') && lower.includes('id'))) {
+      mapping.employee_number = header;
+    } else if (!mapping.full_name && lower === 'name' && !lower.includes('first') && !lower.includes('last')) {
+      mapping.full_name = header;
+    } else if (!mapping.first_name && lower.includes('first') && lower.includes('name')) {
+      mapping.first_name = header;
+    } else if (!mapping.last_name && lower.includes('last') && lower.includes('name')) {
+      mapping.last_name = header;
+    } else if (!mapping.sin && (lower.includes('tax') && lower.includes('id')) || lower === 'sin') {
+      mapping.sin = header;
+    } else if (!mapping.birth_date && (lower.includes('birth') || lower.includes('dob'))) {
+      mapping.birth_date = header;
+    } else if (!mapping.hire_date && lower.includes('hire') && lower.includes('date')) {
+      mapping.hire_date = header;
+    } else if (!mapping.job_title && (lower.includes('job') && lower.includes('title')) || lower.includes('position')) {
+      mapping.job_title = header;
+    } else if (!mapping.home_department && lower.includes('department')) {
+      mapping.home_department = header;
+    } else if (!mapping.province_code && (lower.includes('province') || lower.includes('territory'))) {
+      mapping.province_code = header;
+    } else if (!mapping.status && lower === 'status') {
+      mapping.status = header;
+    } else if (!mapping.rate_type && lower.includes('rate') && lower.includes('type')) {
+      mapping.rate_type = header;
+    } else if (!mapping.rate && lower === 'rate') {
+      mapping.rate = header;
+    } else if (!mapping.email && lower.includes('email')) {
+      mapping.email = header;
+    } else if (!mapping.phone && (lower.includes('phone') || lower.includes('mobile'))) {
+      mapping.phone = header;
+    }
+  });
+
+  return mapping;
+}
+
+// Legacy auto-detect for paycode import
 export function autoDetectMapping(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {};
   
@@ -171,7 +301,7 @@ export function autoDetectMapping(headers: string[]): ColumnMapping {
   // Try exact matches first
   headers.forEach(header => {
     const normalizedHeader = header.trim();
-    const mappedField = ADP_COLUMN_MAPPINGS[normalizedHeader];
+    const mappedField = ADP_PAYCODE_MAPPINGS[normalizedHeader];
     if (mappedField && mapping[mappedField] === null) {
       mapping[mappedField] = header;
     }

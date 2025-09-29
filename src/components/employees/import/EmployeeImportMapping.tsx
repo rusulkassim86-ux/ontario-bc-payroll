@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 import type { ParsedFile } from "@/hooks/useFileParser";
+import { EMPLOYEE_FIELDS, autoDetectEmployeeMapping } from "@/hooks/useFileParser";
 
 interface EmployeeImportMappingProps {
   parsedFile: ParsedFile;
@@ -14,50 +15,10 @@ interface EmployeeImportMappingProps {
   onBack: () => void;
 }
 
-const EMPLOYEE_FIELDS = {
-  employee_number: { label: 'Employee ID', required: true, type: 'text' },
-  first_name: { label: 'First Name', required: true, type: 'text' },
-  last_name: { label: 'Last Name', required: true, type: 'text' },
-  email: { label: 'Email', required: true, type: 'email' },
-  phone: { label: 'Phone', required: false, type: 'text' },
-  department: { label: 'Department', required: false, type: 'text' },
-  position: { label: 'Position', required: false, type: 'text' },
-  classification: { label: 'Classification', required: false, type: 'text' },
-  province_code: { label: 'Province', required: true, type: 'select', options: ['ON', 'BC'] },
-  hire_date: { label: 'Hire Date', required: true, type: 'date' },
-  sin: { label: 'SIN', required: false, type: 'text' },
-  pay_rate: { label: 'Pay Rate', required: false, type: 'number' },
-  gl_cost_center: { label: 'GL Code', required: false, type: 'text' },
-  union_seniority: { label: 'Union Seniority Number', required: false, type: 'text' },
-  reports_to: { label: 'Reports To', required: false, type: 'text' },
-  fte_hours_per_week: { label: 'FTE Hours/Week', required: false, type: 'number' }
-};
-
 export function EmployeeImportMapping({ parsedFile, onMappingComplete, onBack }: EmployeeImportMappingProps) {
-  const [mapping, setMapping] = useState<Record<string, string>>(() => {
-    // Auto-detect mapping based on column headers
-    const autoMapping: Record<string, string> = {};
-    
-    Object.keys(EMPLOYEE_FIELDS).forEach(field => {
-      const fieldConfig = EMPLOYEE_FIELDS[field as keyof typeof EMPLOYEE_FIELDS];
-      const matchingHeader = parsedFile.headers.find(header => {
-        const headerLower = header.toLowerCase().trim();
-        const fieldLower = fieldConfig.label.toLowerCase();
-        
-        return headerLower === fieldLower ||
-               headerLower.includes(fieldLower) ||
-               (field === 'employee_number' && (headerLower.includes('employee') && headerLower.includes('id'))) ||
-               (field === 'province_code' && headerLower.includes('province')) ||
-               (field === 'hire_date' && headerLower.includes('hire'));
-      });
-      
-      if (matchingHeader) {
-        autoMapping[field] = matchingHeader;
-      }
-    });
-    
-    return autoMapping;
-  });
+  const [mapping, setMapping] = useState<Record<string, string>>(() => 
+    autoDetectEmployeeMapping(parsedFile.headers)
+  );
 
   const mappedFields = useMemo(() => {
     return Object.values(mapping).filter(Boolean);

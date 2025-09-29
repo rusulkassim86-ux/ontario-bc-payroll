@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertCircle, CheckCircle, ArrowLeft, Upload } from "lucide-react";
 import type { ParsedFile } from "@/hooks/useFileParser";
+import { validateEmployeeData, findDuplicateEmployees } from "@/utils/adpValidation";
 
 interface EmployeeImportPreviewProps {
   parsedFile: ParsedFile;
@@ -33,71 +34,22 @@ export function EmployeeImportPreview({
 }: EmployeeImportPreviewProps) {
   
   const { validationResults, transformedData } = useMemo(() => {
-    const errors: ValidationError[] = [];
-    const warnings: ValidationError[] = [];
-    const duplicateEmployeeIds = new Set<string>();
-    const duplicateEmails = new Set<string>();
-    const seenEmployeeIds = new Set<string>();
-    const seenEmails = new Set<string>();
+    const validation = validateEmployeeData(parsedFile.data, mapping);
+    const duplicates = findDuplicateEmployees(parsedFile.data, mapping);
     
-    const transformed = parsedFile.data.map((row, index) => {
-      const rowNumber = index + 2; // +2 for header row and 1-indexed
-      const transformedRow: Record<string, any> = { _rowIndex: rowNumber };
-      
-      // Transform each mapped field
-      Object.entries(mapping).forEach(([field, column]) => {
-        if (column && row[column] !== undefined) {
-          let value = row[column];
-          
-          // Type-specific transformations and validations
-          switch (field) {
-            case 'employee_number':
-              value = String(value).trim();
-              if (!value) {
-                errors.push({ row: rowNumber, field, value, message: 'Employee ID is required' });
-              } else if (seenEmployeeIds.has(value)) {
-                duplicateEmployeeIds.add(value);
-                errors.push({ row: rowNumber, field, value, message: 'Duplicate Employee ID' });
-              } else {
-                seenEmployeeIds.add(value);
-              }
-              break;
-              
-            case 'first_name':
-            case 'last_name':
-              value = String(value).trim();
-              if (!value) {
-                errors.push({ row: rowNumber, field, value, message: `${field.replace('_', ' ')} is required` });
-              }
-              break;
-              
-            case 'email':
-              value = String(value).trim().toLowerCase();
-              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-              if (!value) {
-                errors.push({ row: rowNumber, field, value, message: 'Email is required' });
-              } else if (!emailRegex.test(value)) {
-                errors.push({ row: rowNumber, field, value, message: 'Invalid email format' });
-              } else if (seenEmails.has(value)) {
-                duplicateEmails.add(value);
-                errors.push({ row: rowNumber, field, value, message: 'Duplicate email address' });
-              } else {
-                seenEmails.add(value);
-              }
-              break;
-              
-            case 'province_code':
-              value = String(value).trim().toUpperCase();
-              if (!value) {
-                errors.push({ row: rowNumber, field, value, message: 'Province is required' });
-              } else if (!['ON', 'BC'].includes(value)) {
-                errors.push({ row: rowNumber, field, value, message: 'Province must be ON or BC' });
-              }
-              break;
-              
-            case 'hire_date':
-              if (value) {
-                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    return {
+      validationResults: {
+        ...validation,
+        duplicateIds: duplicates.duplicateIds,
+        duplicateEmails: duplicates.duplicateEmails,
+        totalRows: parsedFile.data.length,
+        validRows: parsedFile.data.length - validation.errors.length,
+        errorRows: validation.errors.length,
+        warningRows: validation.warnings.length
+      },
+      transformedData: parsedFile.data.slice(0, 10) // Preview first 10 rows
+    };
+  }, [parsedFile.data, mapping]);
                 if (!dateRegex.test(value) && !Date.parse(value)) {
                   errors.push({ row: rowNumber, field, value, message: 'Invalid date format (use YYYY-MM-DD)' });
                 } else {
