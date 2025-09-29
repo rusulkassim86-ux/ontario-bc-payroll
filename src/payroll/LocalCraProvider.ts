@@ -1,49 +1,43 @@
 import { CalculatorProvider, PayrollInput, PayrollResult } from './CalculatorProvider';
+import rates2025 from './rates-2025.json';
 
-// Current CRA rates for 2024
+// CRA rates for 2025 loaded from JSON
 const CRA_RATES = {
   cpp: {
-    rate: 0.0595, // 5.95%
-    basicExemption: 3500,
-    ympe: 68500, // Year's Maximum Pensionable Earnings
-    employerRate: 0.0595
+    rate: rates2025.cpp.rate,
+    basicExemption: rates2025.cpp.basicExemption,
+    ympe: rates2025.cpp.ympe,
+    employerRate: rates2025.cpp.rate
   },
   ei: {
-    rate: 0.0229, // 2.29%
-    maxInsurable: 63300,
-    employerMultiplier: 1.4
+    rate: rates2025.ei.employeeRate,
+    maxInsurable: rates2025.ei.maxInsurableEarnings,
+    employerMultiplier: rates2025.ei.employerMultiplier
   },
   federalTax: {
-    basicPersonalAmount: 15000,
-    brackets: [
-      { min: 0, max: 55867, rate: 0.15 },
-      { min: 55867, max: 111733, rate: 0.205 },
-      { min: 111733, max: 173205, rate: 0.26 },
-      { min: 173205, max: 246752, rate: 0.29 },
-      { min: 246752, max: Infinity, rate: 0.33 }
-    ]
+    basicPersonalAmount: rates2025.federal.basicPersonalAmount,
+    brackets: rates2025.federal.brackets.map(bracket => ({
+      min: bracket.upTo ? 0 : 0, // Will be calculated dynamically
+      max: bracket.upTo || Infinity,
+      rate: bracket.rate
+    }))
   },
   provincialTax: {
     ON: {
-      basicPersonalAmount: 12399,
-      brackets: [
-        { min: 0, max: 51446, rate: 0.0505 },
-        { min: 51446, max: 102894, rate: 0.0915 },
-        { min: 102894, max: 150000, rate: 0.1116 },
-        { min: 150000, max: 220000, rate: 0.1216 },
-        { min: 220000, max: Infinity, rate: 0.1316 }
-      ]
+      basicPersonalAmount: rates2025.provincial.ON.basicPersonalAmount,
+      brackets: rates2025.provincial.ON.brackets.map(bracket => ({
+        min: bracket.upTo ? 0 : 0, // Will be calculated dynamically
+        max: bracket.upTo || Infinity,
+        rate: bracket.rate
+      }))
     },
     BC: {
-      basicPersonalAmount: 12760,
-      brackets: [
-        { min: 0, max: 47937, rate: 0.0506 },
-        { min: 47937, max: 95875, rate: 0.077 },
-        { min: 95875, max: 110076, rate: 0.105 },
-        { min: 110076, max: 133664, rate: 0.1229 },
-        { min: 133664, max: 181232, rate: 0.147 },
-        { min: 181232, max: Infinity, rate: 0.168 }
-      ]
+      basicPersonalAmount: rates2025.provincial.BC.basicPersonalAmount,
+      brackets: rates2025.provincial.BC.brackets.map(bracket => ({
+        min: bracket.upTo ? 0 : 0, // Will be calculated dynamically
+        max: bracket.upTo || Infinity,
+        rate: bracket.rate
+      }))
     }
   }
 };

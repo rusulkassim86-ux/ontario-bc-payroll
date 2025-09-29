@@ -1,0 +1,52 @@
+{
+  "meta": { "year": 2025, "currency": "CAD" },
+
+  "cpp": {
+    "rate": 0.0595,
+    "basicExemption": 3500,
+    "ympe": 68500,
+    "yame": 76400
+  },
+
+  "ei": {
+    "employeeRate": 0.0166,
+    "employerMultiplier": 1.4,
+    "maxInsurableEarnings": 63600
+  },
+
+  "federal": {
+    "basicPersonalAmount": 15805,
+    "brackets": [
+      { "upTo": 56275,  "rate": 0.15 },
+      { "upTo": 113550, "rate": 0.205 },
+      { "upTo": 174700, "rate": 0.26 },
+      { "upTo": 246750, "rate": 0.29 },
+      { "upTo": null,   "rate": 0.33 }
+    ]
+  },
+
+  "provincial": {
+    "ON": {
+      "basicPersonalAmount": 12700,
+      "brackets": [
+        { "upTo": 51846,  "rate": 0.0505 },
+        { "upTo": 103900, "rate": 0.0915 },
+        { "upTo": 150000, "rate": 0.1116 },
+        { "upTo": 220000, "rate": 0.1216 },
+        { "upTo": null,   "rate": 0.1316 }
+      ]
+    },
+    "BC": {
+      "basicPersonalAmount": 12900,
+      "brackets": [
+        { "upTo": 47900,  "rate": 0.0506 },
+        { "upTo": 95800,  "rate": 0.077 },
+        { "upTo": 110076, "rate": 0.105 },
+        { "upTo": 133664, "rate": 0.1229 },
+        { "upTo": 181232, "rate": 0.147 },
+        { "upTo": 252752, "rate": 0.168 },
+        { "upTo": null,   "rate": 0.205 }
+      ]
+    }
+  }
+}

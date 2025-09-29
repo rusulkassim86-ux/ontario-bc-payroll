@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { EmployeeProfileHeader } from '@/components/workforce/EmployeeProfileHeader';
 import { EmploymentTab } from '@/components/workforce/EmploymentTab';
+import { PayrollTab } from '@/components/payroll/PayrollTab';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import { Employee } from '@/types/employee';
 import { validateEmployee } from '@/utils/employeeMapper';
@@ -138,12 +139,15 @@ export function EmployeeProfile() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5 bg-white border border-gray-200 rounded-lg">
+              <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200 rounded-lg">
                 <TabsTrigger value="personal" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   Personal
                 </TabsTrigger>
                 <TabsTrigger value="employment" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   Employment
+                </TabsTrigger>
+                <TabsTrigger value="payroll" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  Payroll
                 </TabsTrigger>
                 <TabsTrigger value="benefits" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   Benefits
@@ -166,6 +170,10 @@ export function EmployeeProfile() {
 
               <TabsContent value="employment" className="mt-6">
                 <EmploymentTab employee={workforceEmployee} />
+              </TabsContent>
+
+              <TabsContent value="payroll" className="mt-6">
+                <PayrollTab employee={workforceEmployee} />
               </TabsContent>
 
               <TabsContent value="benefits" className="mt-6">

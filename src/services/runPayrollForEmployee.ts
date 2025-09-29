@@ -1,6 +1,5 @@
-import { getPayrollCalculator, PayrollInput, PayrollResult } from '@/payroll';
 import { calculatePayroll } from '@/services/calculatePayroll';
-import { PayrollInput as NewPayrollInput, PayrollResult as NewPayrollResult } from '@/payroll/types';
+import { PayrollInput, PayrollResult } from '@/payroll/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -32,6 +31,11 @@ export async function runPayrollForEmployee(
     if (employeeError || !employee) {
       throw new Error('Employee not found');
     }
+
+    // Validate province support
+    if (!employee.province_code || !['ON', 'BC'].includes(employee.province_code)) {
+      throw new Error('Only Ontario (ON) and British Columbia (BC) are currently supported');
+    }
     
     // Calculate gross pay from timesheets or salary if not provided
     let calculatedGrossPay = grossPay;
@@ -57,34 +61,21 @@ export async function runPayrollForEmployee(
       .eq('tax_year', new Date().getFullYear())
       .maybeSingle();
     
-    // Prepare payroll input
+    // Prepare payroll input using new 2025 structure
     const payrollInput: PayrollInput = {
-      province: employee.province_code || 'ON',
-      payFrequency: period.frequency,
       grossPay: calculatedGrossPay,
+      province: employee.province_code as "ON" | "BC",
+      payFrequency: period.frequency,
       ytd: ytdData ? {
         cpp: ytdData.total_cpp_contributions || 0,
         ei: ytdData.total_ei_premiums || 0,
         fedTax: (ytdData.total_income_tax || 0) * 0.7, // Estimate federal portion
         provTax: (ytdData.total_income_tax || 0) * 0.3, // Estimate provincial portion
-        gross: ytdData.total_employment_income || 0
       } : undefined,
-      td1: {
-        federalBasic: (employee.td1_federal as any)?.basicPersonalAmount || 15000,
-        provincialBasic: (employee.td1_provincial as any)?.basicPersonalAmount || 12000,
-        additionalFed: (employee.td1_federal as any)?.additionalTaxCredits || 0,
-        additionalProv: (employee.td1_provincial as any)?.additionalTaxCredits || 0
-      },
-      employee: {
-        birthDate: employee.hire_date, // Using hire_date as proxy if birth_date not available
-        sin: employee.sin_encrypted ? 'provided' : undefined,
-        unionCode: employee.union_code || undefined
-      }
     };
     
-    // Calculate payroll
-    const calculator = getPayrollCalculator();
-    const result = await calculator.calculate(payrollInput);
+    // Calculate payroll using new 2025 rates
+    const result = await calculatePayroll(payrollInput);
     
     return {
       ...result,
