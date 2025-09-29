@@ -8,19 +8,8 @@ import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { EmployeeProfileHeader } from '@/components/workforce/EmployeeProfileHeader';
 import { EmploymentTab } from '@/components/workforce/EmploymentTab';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
-import { Employee, LegacyEmployee, UserRole, AdditionalEarning } from '@/types/employee';
+import { Employee } from '@/types/employee';
 import { validateEmployee } from '@/utils/employeeMapper';
-
-// Mock user role - in real app this would come from auth context
-const mockUserRole: UserRole = {
-  role: 'HR_Admin',
-  permissions: {
-    canEditPay: true,
-    canRevealSIN: true,
-    canEditStatus: true,
-    canViewAll: true,
-  }
-};
 
 // Mock current employee index for navigation
 const mockCurrentIndex = 1;
@@ -53,19 +42,9 @@ export function EmployeeProfile() {
     );
   }
 
-  // Convert legacy employee to new format
-  const workforceEmployee: Employee = legacyToWorkforceEmployee(employee);
+  // Use employee directly since it already matches database schema
+  const workforceEmployee: Employee = employee;
 
-  const handleEditPosition = () => console.log('Edit position');
-  const handleEditStatus = () => console.log('Edit status');
-  const handleEditPay = () => console.log('Edit pay');
-  const handleEditCorporateGroups = () => console.log('Edit corporate groups');
-  const handleEditWorkSchedule = () => console.log('Edit work schedule');
-  const handleEditTimeOff = () => console.log('Edit time off');
-  const handleEditCustomField = (field: string) => console.log('Edit custom field:', field);
-  const handleAddCustomField = () => console.log('Add custom field');
-  const handleViewEarning = (earning: AdditionalEarning) => console.log('View earning:', earning);
-  const handleAddEarning = () => console.log('Add earning');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -155,16 +134,7 @@ export function EmployeeProfile() {
           {/* Main Content */}
           <div className="flex-1 space-y-6">
             {/* Employee Profile Header */}
-            <EmployeeProfileHeader
-              employee={workforceEmployee}
-              userRole={mockUserRole}
-              onEdit={() => console.log('Edit profile')}
-              onChangeStatus={() => console.log('Change status')}
-              onAddEarning={handleAddEarning}
-              onAddCustomField={handleAddCustomField}
-              onExportPDF={() => console.log('Export PDF')}
-              onPrint={() => console.log('Print')}
-            />
+            <EmployeeProfileHeader employee={workforceEmployee} />
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -195,20 +165,7 @@ export function EmployeeProfile() {
               </TabsContent>
 
               <TabsContent value="employment" className="mt-6">
-                <EmploymentTab
-                  employee={workforceEmployee}
-                  userRole={mockUserRole}
-                  onEditPosition={handleEditPosition}
-                  onEditStatus={handleEditStatus}
-                  onEditPay={handleEditPay}
-                  onEditCorporateGroups={handleEditCorporateGroups}
-                  onEditWorkSchedule={handleEditWorkSchedule}
-                  onEditTimeOff={handleEditTimeOff}
-                  onEditCustomField={handleEditCustomField}
-                  onAddCustomField={handleAddCustomField}
-                  onViewEarning={handleViewEarning}
-                  onAddEarning={handleAddEarning}
-                />
+                <EmploymentTab employee={workforceEmployee} />
               </TabsContent>
 
               <TabsContent value="benefits" className="mt-6">
