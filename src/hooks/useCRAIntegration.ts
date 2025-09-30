@@ -142,20 +142,42 @@ export function useCRAIntegration() {
     try {
       setLoading(true);
       let query = supabase
-        .from('remittance_periods')
+        .from('cra_remittance_reports')
         .select('*')
-        .order('period_start', { ascending: false });
+        .order('report_period_start', { ascending: false });
 
       if (year) {
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
-        query = query.gte('period_start', startDate).lte('period_end', endDate);
+        query = query.gte('report_period_start', startDate).lte('report_period_end', endDate);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
-      setRemittancePeriods(data || []);
+      
+      // Map to RemittancePeriod interface
+      const mapped = (data || []).map(d => ({
+        id: d.id,
+        company_id: d.company_id,
+        period_type: d.report_type,
+        period_start: d.report_period_start,
+        period_end: d.report_period_end,
+        due_date: d.due_date,
+        total_income_tax: d.total_federal_tax + d.total_provincial_tax,
+        total_cpp_employee: d.total_cpp_employee,
+        total_cpp_employer: d.total_cpp_employer,
+        total_ei_employee: d.total_ei_employee,
+        total_ei_employer: d.total_ei_employer,
+        total_remittance: d.total_remittance_due,
+        status: d.status,
+        paid_date: d.status === 'paid' ? d.updated_at : undefined,
+        filed_date: d.status === 'filed' ? d.updated_at : undefined,
+        created_at: d.created_at,
+        updated_at: d.updated_at,
+      }));
+      
+      setRemittancePeriods(mapped);
     } catch (err: any) {
       setError(err.message);
       toast({
@@ -232,24 +254,45 @@ export function useCRAIntegration() {
     }
   };
 
-  // Calculate remittance period totals
-  const calculateRemittanceTotals = async (periodStart: string, periodEnd: string) => {
+  // Calculate and create remittance period
+  const calculateRemittanceTotals = async (periodStart: string, periodEnd: string, periodType: 'monthly' | 'quarterly' = 'monthly') => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('calculate_remittance_period_totals', {
-        p_company_id: 'default-company', // This should come from context
+      
+      // Get current user's company
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!profile?.company_id) throw new Error('Company not found');
+
+      // Call the edge function to calculate and create the period
+      const { data, error } = await supabase.rpc('generate_cra_remittance_report', {
+        p_company_id: profile.company_id,
         p_period_start: periodStart,
-        p_period_end: periodEnd
+        p_period_end: periodEnd,
+        p_report_type: periodType
       });
 
       if (error) throw error;
+      
+      toast({
+        title: "Period Calculated",
+        description: `Remittance period created successfully`,
+      });
+      
       return data;
     } catch (err: any) {
       setError(err.message);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to calculate remittance totals",
+        description: err.message || "Failed to calculate remittance totals",
       });
       throw err;
     } finally {

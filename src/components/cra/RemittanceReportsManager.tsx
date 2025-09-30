@@ -34,11 +34,7 @@ export function RemittanceReportsManager() {
     if (!periodStart || !periodEnd) return;
 
     try {
-      const totals = await calculateRemittanceTotals(periodStart, periodEnd);
-      
-      // Create new remittance period record
-      // This would normally be done through a separate function
-      console.log('Period totals:', totals);
+      await calculateRemittanceTotals(periodStart, periodEnd, periodType);
       
       setShowCalculateDialog(false);
       setPeriodStart('');
@@ -52,34 +48,34 @@ export function RemittanceReportsManager() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-blue-100 text-blue-800';
+      case 'draft': return 'bg-blue-100 text-blue-800';
       case 'calculated': return 'bg-yellow-100 text-yellow-800';
       case 'paid': return 'bg-green-100 text-green-800';
-      case 'filed': return 'bg-purple-100 text-purple-800';
+      case 'submitted': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'open': return <Clock className="w-4 h-4" />;
+      case 'draft': return <Clock className="w-4 h-4" />;
       case 'calculated': return <AlertCircle className="w-4 h-4" />;
       case 'paid': return <CheckCircle className="w-4 h-4" />;
-      case 'filed': return <Send className="w-4 h-4" />;
+      case 'submitted': return <Send className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
   };
 
   const totalRemittancesDue = remittancePeriods
-    .filter(p => ['calculated', 'paid'].includes(p.status))
+    .filter(p => ['calculated', 'draft'].includes(p.status))
     .reduce((sum, p) => sum + p.total_remittance, 0);
 
   const overduePeriods = remittancePeriods.filter(p => 
-    new Date(p.due_date) < new Date() && p.status !== 'filed'
+    new Date(p.due_date) < new Date() && !['paid', 'submitted'].includes(p.status)
   );
 
   const nextDueDate = remittancePeriods
-    .filter(p => p.status !== 'filed' && new Date(p.due_date) >= new Date())
+    .filter(p => !['paid', 'submitted'].includes(p.status) && new Date(p.due_date) >= new Date())
     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0]?.due_date;
 
   return (
@@ -294,7 +290,7 @@ export function RemittanceReportsManager() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {period.status === 'calculated' && (
+                        {['draft', 'calculated'].includes(period.status) && (
                           <>
                             <Button 
                               variant="outline" 
@@ -303,13 +299,7 @@ export function RemittanceReportsManager() {
                               disabled={loading}
                             >
                               <Download className="w-4 h-4 mr-1" />
-                              PD7A
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              EFT File
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              Mark Paid
+                              Download
                             </Button>
                           </>
                         )}
