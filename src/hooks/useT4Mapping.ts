@@ -14,6 +14,8 @@ export interface T4Mapping {
   cra_box_code: string | null;
   cra_other_info: string | null;
   notes: string | null;
+  gl_account: string | null;
+  active: boolean;
   version: number;
   is_active: boolean;
   created_at: string;

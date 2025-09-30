@@ -79,37 +79,30 @@ Deno.serve(async (req) => {
       .eq('company_id', profile.company_id)
       .order('code');
 
-    // Build CSV rows with auto-assignment logic
+    // Build CSV rows with simplified format
     const rows: string[][] = [
       [
         'company_code',
         'item_type',
         'item_code',
-        'item_name',
-        'contributes_box14',
-        'insurable_ei',
-        'pensionable_cpp',
+        'description',
         'cra_box_code',
-        'cra_other_info',
-        'notes',
+        'gl_account',
+        'active',
       ],
     ];
 
     // Process earning codes
     if (earningCodes) {
       for (const earning of earningCodes) {
-        const boxCode = '14'; // All earnings go to box 14
         rows.push([
           companyCode,
-          'EARNING',
+          'earning',
           earning.code,
           earning.description || earning.code,
-          'Y',
-          'Y',
-          'Y',
-          boxCode,
+          '14',
           '',
-          'Employment income',
+          'Y',
         ]);
       }
     }
@@ -118,55 +111,39 @@ Deno.serve(async (req) => {
     if (deductionCodes) {
       for (const deduction of deductionCodes) {
         let boxCode = '';
-        let notes = '';
-        let contributesBox14 = 'N';
-        let insurableEI = 'N';
-        let pensionableCPP = 'N';
 
         // Auto-assign CRA boxes based on code patterns
         const code = deduction.code.toUpperCase();
         if (code.includes('CPP') || code.includes('C.P.P')) {
           boxCode = '16';
-          notes = 'CPP contributions';
         } else if (code.includes('EI') || code.includes('E.I')) {
           boxCode = '18';
-          notes = 'EI premiums';
         } else if (code.includes('TAX') || code.includes('FED') || code.includes('PROV')) {
           boxCode = '22';
-          notes = 'Income tax deducted';
         } else if (code.includes('UNION') || code.includes('DUES')) {
           boxCode = '44';
-          notes = 'Union dues';
         } else if (
           deduction.category?.toUpperCase().includes('BENEFIT') ||
           code.includes('BEN') ||
           code.includes('TAXABLE')
         ) {
           boxCode = '40';
-          notes = 'Other taxable allowances and benefits';
-        } else if (code.includes('RPP') || code.includes('PENSION')) {
+        } else if (code.includes('RPP') || code.includes('PENSION') || code.includes('DPS')) {
           boxCode = '20';
-          notes = 'RPP contributions';
+        } else if (code.includes('STD') || code.includes('LTD')) {
+          boxCode = '85';
+        } else if (code.includes('ADV')) {
+          boxCode = '30';
         }
-
-        const itemType =
-          deduction.category?.toUpperCase() === 'TAX'
-            ? 'TAX'
-            : deduction.category?.toUpperCase() === 'BENEFIT'
-            ? 'BENEFIT'
-            : 'DEDUCTION';
 
         rows.push([
           companyCode,
-          itemType,
+          'deduction',
           deduction.code,
           deduction.description || deduction.code,
-          contributesBox14,
-          insurableEI,
-          pensionableCPP,
-          boxCode,
+          boxCode || 'N/A',
           '',
-          notes,
+          'Y',
         ]);
       }
     }

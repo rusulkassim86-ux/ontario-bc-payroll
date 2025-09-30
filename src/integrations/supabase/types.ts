@@ -2725,6 +2725,7 @@ export type Database = {
       }
       t4_paycode_mapping: {
         Row: {
+          active: boolean
           company_code: string
           company_id: string
           contributes_box14: boolean
@@ -2732,6 +2733,7 @@ export type Database = {
           cra_other_info: string | null
           created_at: string
           created_by: string | null
+          gl_account: string | null
           id: string
           insurable_ei: boolean
           is_active: boolean
@@ -2744,6 +2746,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          active?: boolean
           company_code: string
           company_id: string
           contributes_box14?: boolean
@@ -2751,6 +2754,7 @@ export type Database = {
           cra_other_info?: string | null
           created_at?: string
           created_by?: string | null
+          gl_account?: string | null
           id?: string
           insurable_ei?: boolean
           is_active?: boolean
@@ -2763,6 +2767,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          active?: boolean
           company_code?: string
           company_id?: string
           contributes_box14?: boolean
@@ -2770,6 +2775,7 @@ export type Database = {
           cra_other_info?: string | null
           created_at?: string
           created_by?: string | null
+          gl_account?: string | null
           id?: string
           insurable_ei?: boolean
           is_active?: boolean

@@ -10,13 +10,10 @@ interface MappingRow {
   company_code: string;
   item_type: string;
   item_code: string;
-  item_name: string;
-  contributes_box14: string;
-  insurable_ei: string;
-  pensionable_cpp: string;
+  description: string;
   cra_box_code: string;
-  cra_other_info: string;
-  notes: string;
+  gl_account: string;
+  active: string;
 }
 
 Deno.serve(async (req) => {
@@ -113,10 +110,8 @@ Deno.serve(async (req) => {
       'company_code',
       'item_type',
       'item_code',
-      'item_name',
-      'contributes_box14',
-      'insurable_ei',
-      'pensionable_cpp',
+      'description',
+      'active',
     ];
 
     const firstRow = jsonData[0];
@@ -137,24 +132,19 @@ Deno.serve(async (req) => {
     }
 
     // Validate each row
-    const validItemTypes = ['EARNING', 'DEDUCTION', 'BENEFIT', 'TAX'];
-    const validBoxCodes = ['14', '16', '18', '20', '22', '24', '26', '40', '44', ''];
+    const validItemTypes = ['earning', 'deduction', 'benefit', 'tax', 'employer', 'netpay'];
+    const validBoxCodes = ['14', '16', '18', '20', '22', '24', '26', '30', '40', '44', '66', '85', 'N/A', ''];
 
     jsonData.forEach((row, index) => {
       if (!['OZC', '72R', '72S'].includes(row.company_code)) {
         errors.push(`Row ${index + 2}: Invalid company_code '${row.company_code}'`);
       }
-      if (!validItemTypes.includes(row.item_type)) {
+      const itemTypeLower = row.item_type?.toLowerCase();
+      if (!validItemTypes.includes(itemTypeLower)) {
         errors.push(`Row ${index + 2}: Invalid item_type '${row.item_type}'`);
       }
-      if (!['Y', 'N'].includes(row.contributes_box14?.toUpperCase())) {
-        errors.push(`Row ${index + 2}: contributes_box14 must be Y or N`);
-      }
-      if (!['Y', 'N'].includes(row.insurable_ei?.toUpperCase())) {
-        errors.push(`Row ${index + 2}: insurable_ei must be Y or N`);
-      }
-      if (!['Y', 'N'].includes(row.pensionable_cpp?.toUpperCase())) {
-        errors.push(`Row ${index + 2}: pensionable_cpp must be Y or N`);
+      if (!['Y', 'N'].includes(row.active?.toUpperCase())) {
+        errors.push(`Row ${index + 2}: active must be Y or N`);
       }
       if (row.cra_box_code && !validBoxCodes.includes(row.cra_box_code)) {
         errors.push(`Row ${index + 2}: Invalid cra_box_code '${row.cra_box_code}'`);
@@ -189,21 +179,27 @@ Deno.serve(async (req) => {
       .eq('company_code', companyCode);
 
     // Insert new mappings
-    const insertData = jsonData.map((row) => ({
-      company_id: profile.company_id,
-      company_code: row.company_code,
-      item_type: row.item_type,
-      item_code: row.item_code,
-      item_name: row.item_name,
-      contributes_box14: row.contributes_box14.toUpperCase() === 'Y',
-      insurable_ei: row.insurable_ei.toUpperCase() === 'Y',
-      pensionable_cpp: row.pensionable_cpp.toUpperCase() === 'Y',
-      cra_box_code: row.cra_box_code || null,
-      cra_other_info: row.cra_other_info || null,
-      notes: row.notes || null,
-      version: newVersion,
-      created_by: user.id,
-    }));
+    const insertData = jsonData.map((row) => {
+      // Determine flags based on item_type
+      const itemTypeLower = row.item_type.toLowerCase();
+      const isEarning = itemTypeLower === 'earning';
+      
+      return {
+        company_id: profile.company_id,
+        company_code: row.company_code,
+        item_type: row.item_type.toUpperCase(),
+        item_code: row.item_code,
+        item_name: row.description,
+        contributes_box14: isEarning,
+        insurable_ei: isEarning,
+        pensionable_cpp: isEarning,
+        cra_box_code: row.cra_box_code && row.cra_box_code !== 'N/A' ? row.cra_box_code : null,
+        gl_account: row.gl_account || null,
+        active: row.active.toUpperCase() === 'Y',
+        version: newVersion,
+        created_by: user.id,
+      };
+    });
 
     const { error: insertError } = await supabaseClient
       .from('t4_paycode_mapping')
