@@ -308,12 +308,12 @@ export function EmploymentTab({ employee, isEditing, editData, onFieldChange }: 
             <div className="space-y-2">
               <Label>Union Type</Label>
               {isEditing ? (
-                <Select value={(currentData as any).union_type || ''} onValueChange={(value) => onFieldChange('union_type', value)}>
+                <Select value={(currentData as any).union_type || 'none'} onValueChange={(value) => onFieldChange('union_type', value === 'none' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select union" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="UNIFOR">UNIFOR</SelectItem>
                     <SelectItem value="PSAC">PSAC</SelectItem>
                     <SelectItem value="NonUnion">Non-Union</SelectItem>
@@ -345,12 +345,12 @@ export function EmploymentTab({ employee, isEditing, editData, onFieldChange }: 
             <div className="space-y-2">
               <Label>Union Code</Label>
               {isEditing ? (
-                <Select value={currentData.union_code || ''} onValueChange={(value) => onFieldChange('union_code', value)}>
+                <Select value={currentData.union_code || 'none'} onValueChange={(value) => onFieldChange('union_code', value === 'none' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select union" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Non-union</SelectItem>
+                    <SelectItem value="none">Non-union</SelectItem>
                     <SelectItem value="UNIFOR">UNIFOR</SelectItem>
                     <SelectItem value="PSAC">PSAC</SelectItem>
                     <SelectItem value="CUPE">CUPE</SelectItem>

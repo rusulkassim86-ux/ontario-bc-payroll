@@ -29,12 +29,12 @@ export const CostCenterSelector: React.FC<CostCenterSelectorProps> = ({
   });
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value || "none"} onValueChange={(val) => onChange(val === "none" ? "" : val)}>
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">None</SelectItem>
+        <SelectItem value="none">None</SelectItem>
         {costCenters.map((center) => (
           <SelectItem key={center.code} value={center.code}>
             <span className="font-mono">{center.code}</span> - {center.name}

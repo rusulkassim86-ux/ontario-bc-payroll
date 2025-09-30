@@ -233,14 +233,14 @@ const CRAIntegration: React.FC = () => {
             <div className="grid md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="operation-filter">Operation</Label>
-                <Select value={logFilters.operation} onValueChange={(value) => 
-                  setLogFilters(prev => ({ ...prev, operation: value }))
+                <Select value={logFilters.operation || 'all'} onValueChange={(value) => 
+                  setLogFilters(prev => ({ ...prev, operation: value === 'all' ? '' : value }))
                 }>
                   <SelectTrigger>
                     <SelectValue placeholder="All operations" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All operations</SelectItem>
+                    <SelectItem value="all">All operations</SelectItem>
                     <SelectItem value="calc">Calculation</SelectItem>
                     <SelectItem value="t4">T4 Generation</SelectItem>
                     <SelectItem value="roe">ROE Generation</SelectItem>
@@ -249,14 +249,14 @@ const CRAIntegration: React.FC = () => {
               </div>
               <div>
                 <Label htmlFor="status-filter">Status</Label>
-                <Select value={logFilters.status} onValueChange={(value) =>
-                  setLogFilters(prev => ({ ...prev, status: value }))
+                <Select value={logFilters.status || 'all'} onValueChange={(value) =>
+                  setLogFilters(prev => ({ ...prev, status: value === 'all' ? '' : value }))
                 }>
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="success">Success</SelectItem>
                     <SelectItem value="error">Error</SelectItem>
                     <SelectItem value="timeout">Timeout</SelectItem>
