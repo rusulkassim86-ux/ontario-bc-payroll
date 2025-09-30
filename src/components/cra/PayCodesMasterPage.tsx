@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, Download, FileText, Settings, CheckCircle, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { Upload, Download, FileText, Settings, CheckCircle, AlertCircle, Edit, Trash2, FileDown } from 'lucide-react';
 import { useCRAIntegration } from '@/hooks/useCRAIntegration';
+import { useT4Mapping } from '@/hooks/useT4Mapping';
 
 const COMPANY_CODES = ['72R', '72S', 'OZC'];
 
@@ -49,8 +50,11 @@ export function PayCodesMasterPage() {
     loading 
   } = useCRAIntegration();
   
+  const { downloadMapping, uploadMapping, loadDefaults: loadDefaultMappings } = useT4Mapping();
+  
   const [selectedCompanyCode, setSelectedCompanyCode] = useState<string>('72R');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingT4, setUploadingT4] = useState(false);
 
   const handleFileUpload = async () => {
     if (!selectedFile) return;
@@ -86,9 +90,26 @@ export function PayCodesMasterPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  const downloadCurrentMapping = async () => {
+    await downloadMapping(selectedCompanyCode);
+  };
+
+  const handleT4Upload = async (file: File) => {
+    setUploadingT4(true);
+    try {
+      await uploadMapping(file, selectedCompanyCode);
+      // Clear the file input
+      const fileInput = document.getElementById('t4-mapping-file') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      console.error('T4 upload error:', error);
+    } finally {
+      setUploadingT4(false);
+    }
+  };
+
   const loadDefaults = async (companyCode: string) => {
-    // This would call an API to load default mappings
-    console.log(`Loading default mappings for ${companyCode}`);
+    await loadDefaultMappings(companyCode);
   };
 
   const filteredMappings = paycodeMappings.filter(m => m.company_code === selectedCompanyCode);
@@ -166,11 +187,52 @@ export function PayCodesMasterPage() {
                         </Button>
                         <Button 
                           variant="outline" 
+                          onClick={downloadCurrentMapping}
+                          className="flex-1"
+                        >
+                          <FileDown className="w-4 h-4 mr-2" />
+                          Download Mapping
+                        </Button>
+                        <Button 
+                          variant="outline" 
                           onClick={() => loadDefaults(companyCode)}
                           className="flex-1"
                         >
                           Load Defaults
                         </Button>
+                      </div>
+                    </div>
+
+                    {/* New T4 Mapping Upload Section */}
+                    <div className="border-t pt-4 mt-4">
+                      <div className="mb-4">
+                        <h4 className="font-semibold flex items-center gap-2 mb-2">
+                          <FileText className="w-4 h-4" />
+                          T4 Mapping Upload
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          Upload T4 mapping CSV with validation (company_code, item_type, item_code, flags, CRA boxes)
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="t4-mapping-file">T4 Mapping File</Label>
+                          <Input
+                            id="t4-mapping-file"
+                            type="file"
+                            accept=".csv,.xlsx,.xls"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleT4Upload(file);
+                            }}
+                            disabled={uploadingT4}
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <p className="text-sm text-muted-foreground">
+                            {uploadingT4 ? 'Validating and uploading...' : 'Select a file to upload T4 mappings'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

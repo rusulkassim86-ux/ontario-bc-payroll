@@ -27,3 +27,9 @@ verify_jwt = true
 
 [functions.device-sync]
 verify_jwt = true
+
+[functions.export-t4-mapping]
+verify_jwt = true
+
+[functions.upload-t4-mapping]
+verify_jwt = true

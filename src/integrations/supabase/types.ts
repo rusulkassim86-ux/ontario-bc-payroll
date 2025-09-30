@@ -2723,6 +2723,74 @@ export type Database = {
           },
         ]
       }
+      t4_paycode_mapping: {
+        Row: {
+          company_code: string
+          company_id: string
+          contributes_box14: boolean
+          cra_box_code: string | null
+          cra_other_info: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          insurable_ei: boolean
+          is_active: boolean
+          item_code: string
+          item_name: string
+          item_type: string
+          notes: string | null
+          pensionable_cpp: boolean
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          company_code: string
+          company_id: string
+          contributes_box14?: boolean
+          cra_box_code?: string | null
+          cra_other_info?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insurable_ei?: boolean
+          is_active?: boolean
+          item_code: string
+          item_name: string
+          item_type: string
+          notes?: string | null
+          pensionable_cpp?: boolean
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          company_code?: string
+          company_id?: string
+          contributes_box14?: boolean
+          cra_box_code?: string | null
+          cra_other_info?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insurable_ei?: boolean
+          is_active?: boolean
+          item_code?: string
+          item_name?: string
+          item_type?: string
+          notes?: string | null
+          pensionable_cpp?: boolean
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "t4_paycode_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       t4_slips: {
         Row: {
           amendment_reason: string | null
