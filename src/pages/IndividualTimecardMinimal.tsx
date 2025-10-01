@@ -249,11 +249,28 @@ export default function IndividualTimecardMinimal() {
 
   // Merge punch data with timecard entries
   // AUTO-FILL: Calculate hours from punches and default to REG pay code
+  // OZC Exception: Do NOT auto-calculate hours for OZC company code
   const mergeEntriesWithPunches = (timecardEntries: TimecardEntry[]): TimecardEntry[] => {
     return timecardEntries.map(entry => {
       const dateStr = format(entry.date, 'yyyy-MM-dd');
       const punchPair = punchPairs.find(pair => pair.date === dateStr);
       
+      // For OZC company code, do NOT auto-calculate hours from punches
+      if (companyCode === 'OZC') {
+        // Only populate In/Out times but keep hours at 0 for manual entry
+        if (punchPair && punchPair.isComplete) {
+          return {
+            ...entry,
+            timeIn: punchPair.timeIn || entry.timeIn,
+            timeOut: punchPair.timeOut || entry.timeOut,
+            hours: 0, // Keep at 0 for manual entry
+            payCode: entry.payCode === 'REG' ? 'REG' : entry.payCode
+          };
+        }
+        return entry;
+      }
+      
+      // For other company codes (72R, 72S), auto-calculate hours from punches
       if (punchPair && punchPair.isComplete) {
         // Auto-calculate hours from punch In/Out times
         const calculatedHours = calculateHours(punchPair.timeIn || '', punchPair.timeOut || '');
@@ -1213,8 +1230,16 @@ export default function IndividualTimecardMinimal() {
                                     </SelectContent>
                                   </Select>
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
-                                  {entry.hours.toFixed(2)}
+                                <TableCell className="text-right">
+                                  <Input
+                                    type="number"
+                                    value={entry.hours || ''}
+                                    onChange={(e) => updateEntry(entry.id, 'hours', parseFloat(e.target.value) || 0)}
+                                    className="w-20 text-right font-mono"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                  />
                                 </TableCell>
                                 <TableCell>
                                   <Select
