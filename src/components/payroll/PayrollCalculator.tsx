@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileSpreadsheet, Calculator, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, Calculator, Download, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
 
 interface EmployeeData {
@@ -52,13 +53,35 @@ interface CRATaxData {
 
 export const PayrollCalculator: React.FC = () => {
   const [employeeFile, setEmployeeFile] = useState<File | null>(null);
-  const [taxFile, setTaxFile] = useState<File | null>(null);
   const [employeeData, setEmployeeData] = useState<EmployeeData[]>([]);
-  const [taxData, setTaxData] = useState<CRATaxData[]>([]);
   const [calculations, setCalculations] = useState<TaxCalculation[]>([]);
   const [loading, setLoading] = useState(false);
   const [payPeriod, setPayPeriod] = useState<string>('26'); // Bi-weekly default
+  const [activePack, setActivePack] = useState<any>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadActiveTaxPack();
+  }, []);
+
+  const loadActiveTaxPack = async () => {
+    const { data: pack } = await supabase
+      .from('cra_year_packs')
+      .select('*')
+      .eq('is_active', true)
+      .single();
+    
+    if (pack) {
+      setActivePack(pack);
+    } else {
+      toast({
+        title: "No active tax pack",
+        description: "Please upload a CRA Year Pack to enable calculations",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleEmployeeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -116,51 +139,26 @@ export const PayrollCalculator: React.FC = () => {
     }
   };
 
-  const handleTaxFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setTaxFile(file);
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      
-      const taxRules: CRATaxData[] = [];
-      for (let i = 1; i < jsonData.length; i++) { // Skip header
-        const row = jsonData[i];
-        if (row && row.length >= 4) {
-          taxRules.push({
-            earningsFrom: parseFloat(row[0]) || 0,
-            earningsTo: parseFloat(row[1]) || 0,
-            employeeCPP: parseFloat(row[2]) || 0,
-            employerCPP: parseFloat(row[3]) || 0,
-          });
-        }
+  const validateEmployeeData = (): string[] => {
+    const errors: string[] = [];
+    
+    employeeData.forEach((emp, index) => {
+      if (!emp.province || (emp.province !== 'ON' && emp.province !== 'BC')) {
+        errors.push(`Employee ${emp.name}: Missing or invalid province (must be ON or BC)`);
       }
-      
-      setTaxData(taxRules);
-      toast({
-        title: "Tax tables loaded",
-        description: `Loaded ${taxRules.length} tax rules`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error loading tax file",
-        description: "Please ensure the file format is correct",
-        variant: "destructive",
-      });
-    }
+      if (!emp.taxId) {
+        errors.push(`Employee ${emp.name}: Missing SIN/Tax ID`);
+      }
+      if (emp.grossPay <= 0) {
+        errors.push(`Employee ${emp.name}: Invalid gross pay amount`);
+      }
+    });
+    
+    return errors;
   };
 
-  const calculateTaxes = (grossPay: number, payPeriodsPerYear: number): Partial<TaxCalculation> => {
-    // Find applicable tax bracket
-    const bracket = taxData.find(rule => 
-      grossPay >= rule.earningsFrom && grossPay <= rule.earningsTo
-    );
-
-    if (!bracket) {
+  const calculateTaxes = (grossPay: number, payPeriodsPerYear: number, province: string): Partial<TaxCalculation> => {
+    if (!activePack?.pack_data) {
       return {
         cppEmployee: 0,
         cppEmployer: 0,
@@ -171,26 +169,31 @@ export const PayrollCalculator: React.FC = () => {
       };
     }
 
-    // CPP calculations (4.95% employee, 4.95% employer, max $66,600 annually)
+    const { cpp, ei } = activePack.pack_data;
     const annualGross = grossPay * payPeriodsPerYear;
-    const cppMax = 66600;
-    const cppRate = 0.0495;
-    const cppExemption = 3500;
+
+    // CPP calculations using active pack rates
+    const cppRate = cpp?.employee_rate || 0.0595;
+    const cppExemption = cpp?.basic_exemption || 3500;
+    const cppMax = cpp?.max_pensionable || 68500;
     const cppPensionable = Math.min(annualGross, cppMax) - cppExemption;
     const cppEmployee = Math.max(0, (cppPensionable * cppRate) / payPeriodsPerYear);
     const cppEmployer = cppEmployee;
 
-    // EI calculations (1.63% employee, 2.282% employer, max $63,300 annually)
-    const eiMax = 63300;
-    const eiRateEmployee = 0.0163;
-    const eiRateEmployer = 0.02282;
+    // EI calculations using active pack rates
+    const eiRateEmployee = ei?.employee_rate || 0.0166;
+    const eiRateEmployer = ei?.employer_rate || 0.02324;
+    const eiMax = ei?.max_insurable || 63600;
     const eiInsurable = Math.min(annualGross, eiMax);
     const eiEmployee = (eiInsurable * eiRateEmployee) / payPeriodsPerYear;
     const eiEmployer = (eiInsurable * eiRateEmployer) / payPeriodsPerYear;
 
-    // Simplified tax calculation (would need proper tax tables in production)
-    const federalTax = grossPay * 0.15; // Simplified 15% federal
-    const provincialTax = grossPay * 0.05; // Simplified 5% provincial
+    // Tax calculations using active pack brackets
+    const federalBrackets = activePack.pack_data.federal_tax || [];
+    const provincialBrackets = activePack.pack_data.provincial_tax?.[province] || [];
+    
+    const federalTax = calculateTaxFromBrackets(annualGross, federalBrackets) / payPeriodsPerYear;
+    const provincialTax = calculateTaxFromBrackets(annualGross, provincialBrackets) / payPeriodsPerYear;
 
     return {
       cppEmployee: Math.round(cppEmployee * 100) / 100,
@@ -202,11 +205,55 @@ export const PayrollCalculator: React.FC = () => {
     };
   };
 
-  const processPayroll = () => {
-    if (employeeData.length === 0 || taxData.length === 0) {
+  const calculateTaxFromBrackets = (annualIncome: number, brackets: any[]): number => {
+    if (!brackets || brackets.length === 0) return annualIncome * 0.15; // Fallback
+    
+    let tax = 0;
+    let previousThreshold = 0;
+    
+    for (const bracket of brackets) {
+      const threshold = bracket.upTo || Infinity;
+      const rate = bracket.rate || 0;
+      
+      if (annualIncome > previousThreshold) {
+        const taxableInThisBracket = Math.min(annualIncome, threshold) - previousThreshold;
+        tax += taxableInThisBracket * rate;
+        previousThreshold = threshold;
+      }
+      
+      if (annualIncome <= threshold) break;
+    }
+    
+    return tax;
+  };
+
+  const processPayroll = async () => {
+    if (employeeData.length === 0) {
       toast({
         title: "Missing data",
-        description: "Please upload both employee and tax files",
+        description: "Please upload employee file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!activePack) {
+      toast({
+        title: "No active tax pack",
+        description: "Please upload a CRA Year Pack first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate employee data
+    const errors = validateEmployeeData();
+    setValidationErrors(errors);
+    
+    if (errors.length > 0) {
+      toast({
+        title: "Validation errors",
+        description: `${errors.length} employee(s) have missing or invalid data`,
         variant: "destructive",
       });
       return;
@@ -216,7 +263,7 @@ export const PayrollCalculator: React.FC = () => {
     const payPeriodsPerYear = parseInt(payPeriod);
     
     const results: TaxCalculation[] = employeeData.map(employee => {
-      const taxes = calculateTaxes(employee.grossPay, payPeriodsPerYear);
+      const taxes = calculateTaxes(employee.grossPay, payPeriodsPerYear, employee.province);
       
       // Union dues calculation (only for 72S prefix)
       const unionDues = employee.prefixCode === '72S' && employee.unionCode === '72S' 
@@ -248,9 +295,17 @@ export const PayrollCalculator: React.FC = () => {
     setCalculations(results);
     setLoading(false);
     
+    // Log calculation
+    console.log(`Payroll calculated using CRA Year Pack ${activePack.tax_year}`, {
+      pack_id: activePack.id,
+      tax_year: activePack.tax_year,
+      employee_count: results.length,
+      pay_periods: payPeriodsPerYear
+    });
+    
     toast({
       title: "Payroll calculated",
-      description: `Processed ${results.length} employees`,
+      description: `Processed ${results.length} employees using ${activePack.tax_year} tax rates`,
     });
   };
 
@@ -326,6 +381,37 @@ export const PayrollCalculator: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Active Pack Info */}
+      {activePack && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Active Tax Year:</strong> {activePack.tax_year}
+            {activePack.tax_year !== new Date().getFullYear() && (
+              <span className="text-destructive"> (Warning: Not current year)</span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Data Validation Errors:</strong>
+            <ul className="list-disc list-inside mt-2">
+              {validationErrors.slice(0, 10).map((error, i) => (
+                <li key={i} className="text-sm">{error}</li>
+              ))}
+              {validationErrors.length > 10 && (
+                <li className="text-sm">...and {validationErrors.length - 10} more</li>
+              )}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -333,12 +419,12 @@ export const PayrollCalculator: React.FC = () => {
             CRA Payroll Calculator
           </CardTitle>
           <CardDescription>
-            Upload employee master data and CRA tax tables to generate payroll calculations and T4-ready outputs
+            Upload employee master data. Calculations use the active CRA Year Pack ({activePack?.tax_year || 'none'}).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* File Uploads */}
-          <div className="grid md:grid-cols-2 gap-4">
+          {/* File Upload */}
+          <div>
             <div>
               <Label htmlFor="employee-file">Employee Master Data</Label>
               <div className="mt-2">
@@ -354,26 +440,6 @@ export const PayrollCalculator: React.FC = () => {
                     <FileSpreadsheet className="h-4 w-4" />
                     {employeeFile.name}
                     <Badge variant="secondary">{employeeData.length} employees</Badge>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="tax-file">CRA Tax Tables</Label>
-              <div className="mt-2">
-                <Input
-                  id="tax-file"
-                  type="file"
-                  accept=".xlsx,.csv"
-                  onChange={handleTaxFileUpload}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/80"
-                />
-                {taxFile && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                    <FileSpreadsheet className="h-4 w-4" />
-                    {taxFile.name}
-                    <Badge variant="secondary">{taxData.length} tax rules</Badge>
                   </div>
                 )}
               </div>
@@ -400,7 +466,7 @@ export const PayrollCalculator: React.FC = () => {
           <div className="flex gap-4">
             <Button 
               onClick={processPayroll} 
-              disabled={loading || employeeData.length === 0 || taxData.length === 0}
+              disabled={loading || employeeData.length === 0 || !activePack}
               className="flex items-center gap-2"
             >
               <Calculator className="h-4 w-4" />

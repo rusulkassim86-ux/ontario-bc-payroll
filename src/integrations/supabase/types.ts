@@ -280,6 +280,53 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          active_tax_year: number
+          company_id: string
+          cra_bn_rp: string | null
+          cra_wac: string | null
+          created_at: string
+          id: string
+          transmitter_email: string | null
+          transmitter_name: string | null
+          transmitter_phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          active_tax_year?: number
+          company_id: string
+          cra_bn_rp?: string | null
+          cra_wac?: string | null
+          created_at?: string
+          id?: string
+          transmitter_email?: string | null
+          transmitter_name?: string | null
+          transmitter_phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active_tax_year?: number
+          company_id?: string
+          cra_bn_rp?: string | null
+          cra_wac?: string | null
+          created_at?: string
+          id?: string
+          transmitter_email?: string | null
+          transmitter_name?: string | null
+          transmitter_phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cost_centers: {
         Row: {
           active: boolean
@@ -504,6 +551,44 @@ export type Database = {
         }
         Relationships: []
       }
+      cra_rate_changes: {
+        Row: {
+          change_details: Json
+          change_type: string
+          company_id: string
+          created_at: string
+          from_year: number
+          id: string
+          to_year: number
+        }
+        Insert: {
+          change_details?: Json
+          change_type: string
+          company_id: string
+          created_at?: string
+          from_year: number
+          id?: string
+          to_year: number
+        }
+        Update: {
+          change_details?: Json
+          change_type?: string
+          company_id?: string
+          created_at?: string
+          from_year?: number
+          id?: string
+          to_year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cra_rate_changes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cra_remittance_reports: {
         Row: {
           company_id: string
@@ -688,6 +773,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      cra_year_packs: {
+        Row: {
+          company_id: string
+          created_at: string
+          filename: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          pack_data: Json
+          tax_year: number
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          filename: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          pack_data?: Json
+          tax_year: number
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          filename?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          pack_data?: Json
+          tax_year?: number
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cra_year_packs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deduction_codes: {
         Row: {

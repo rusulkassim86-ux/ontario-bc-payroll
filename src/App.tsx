@@ -29,6 +29,7 @@ import DevRoutes from "./pages/DevRoutes";
 import NotFound from "./pages/NotFound";
 const AdminCodes = lazy(() => import('@/pages/AdminCodes'));
 const CRAIntegration = lazy(() => import('@/pages/CRAIntegration'));
+const CRAYearPack = lazy(() => import('@/pages/CRAYearPack'));
 import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 import { PortalApp } from "./portal/PortalApp";
@@ -102,6 +103,11 @@ const App = () => (
               <Route path="/admin/cra-integration" element={
                 <Suspense fallback={<div>Loading...</div>}>
                   <CRAIntegration />
+                </Suspense>
+              } />
+              <Route path="/admin/cra-year-pack" element={
+                <Suspense fallback={<div>Loading...</div>}>
+                  <CRAYearPack />
                 </Suspense>
               } />
             

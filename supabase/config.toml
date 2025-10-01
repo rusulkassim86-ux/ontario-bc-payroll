@@ -39,3 +39,12 @@ verify_jwt = true
 
 [functions.parse-adp-register]
 verify_jwt = true
+
+[functions.upload-cra-year-pack]
+verify_jwt = false
+
+[functions.generate-t4-xml]
+verify_jwt = false
+
+[functions.validate-year-end-readiness]
+verify_jwt = false
