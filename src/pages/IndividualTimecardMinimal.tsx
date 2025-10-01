@@ -17,6 +17,7 @@ import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
 import { PayCode } from '@/hooks/usePayCodes';
 import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
 import { usePayCodesMaster, PayCodeMaster } from '@/hooks/usePayCodesMaster';
+import { useTimesheetPayCodes } from '@/hooks/useTimesheetPayCodes';
 import { ManualPunchDialog } from '@/components/punch/ManualPunchDialog';
 import { usePunches } from '@/hooks/usePunches';
 import { useDeviceMapping } from '@/hooks/useDeviceMapping';
@@ -72,8 +73,14 @@ export default function IndividualTimecardMinimal() {
   const [payCodeMap, setPayCodeMap] = useState<Record<string, PayCode>>({});
   const [validatingEmployee, setValidatingEmployee] = useState(true);
   
-  // Fetch pay codes from master table
+  // Fetch pay codes from master table (for reference/display)
   const { payCodes: masterPayCodes, loading: payCodesLoading } = usePayCodesMaster();
+  
+  // Determine company code from employee data
+  const companyCode = (employeeData as any)?.company_code || (employeeData as any)?.employee_group;
+  
+  // Fetch company-specific pay codes for timesheet entry
+  const { payCodes: timesheetPayCodes, loading: timesheetPayCodesLoading } = useTimesheetPayCodes(companyCode);
 
   // Calculate bi-weekly period based on company pay period settings
   const calculateBiWeeklyPeriod = (providedStart?: string, providedEnd?: string) => {
@@ -302,9 +309,9 @@ export default function IndividualTimecardMinimal() {
     };
   };
 
-  // Get active pay codes for dropdown (filter for Earnings, Overtime, and Leave types)
-  const payCodeOptions = masterPayCodes
-    .filter(pc => pc.is_active && ['Earnings', 'Overtime', 'Leave'].includes(pc.type))
+  // Get active pay codes for dropdown filtered by company code
+  const payCodeOptions = timesheetPayCodes
+    .filter(pc => pc.allow_in_timesheets)
     .map(pc => pc.code);
   
   const departmentOptions = ["0000700", "0000701", "0000702", "0000703"];
@@ -1062,13 +1069,13 @@ export default function IndividualTimecardMinimal() {
                                       <SelectValue placeholder="Pay Code" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
-                                      {payCodesLoading ? (
+                                      {timesheetPayCodesLoading ? (
                                         <SelectItem value="loading" disabled>Loading...</SelectItem>
                                       ) : payCodeOptions.length === 0 ? (
-                                        <SelectItem value="none" disabled>No pay codes</SelectItem>
+                                        <SelectItem value="none" disabled>No pay codes available for this company</SelectItem>
                                       ) : (
                                         payCodeOptions.map(code => {
-                                          const payCodeDetails = masterPayCodes.find(pc => pc.code === code);
+                                          const payCodeDetails = timesheetPayCodes.find(pc => pc.code === code);
                                           return (
                                             <SelectItem key={code} value={code}>
                                               <div className="flex items-center gap-2">
