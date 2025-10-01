@@ -12,6 +12,9 @@ import { NotificationItem } from "./NotificationItem";
 
 export const NotificationBell = () => {
   const { notifications, unreadCount, markAllAsRead } = useNotifications();
+  
+  // Diagnostic: Verify QueryClient is available
+  console.log('NotificationBell - QueryClient available:', !!notifications);
 
   return (
     <Popover>

@@ -62,20 +62,20 @@ console.table([
 ]);
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <HTTPSEnforcer />
-      <AuthProvider>
-        <AuthGuard>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Portal routes - separate from main app layout */}
-              <Route path="/portal/*" element={<PortalApp />} />
-              
-              {/* Main app routes */}
-              <Route path="/*" element={
+  <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <HTTPSEnforcer />
+        <Toaster />
+        <Sonner />
+        <Routes>
+          {/* Portal routes - use shared QueryClient but separate auth */}
+          <Route path="/portal/*" element={<PortalApp />} />
+          
+          {/* Main app routes - require AuthGuard */}
+          <Route path="/*" element={
+            <AuthProvider>
+              <AuthGuard>
                 <AppLayout>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
@@ -120,16 +120,16 @@ const App = () => (
                         <CRAYearPack />
                       </Suspense>
                     } />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AppLayout>
-              } />
-            </Routes>
-          </BrowserRouter>
-        </AuthGuard>
-      </AuthProvider>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AppLayout>
+            </AuthGuard>
+          </AuthProvider>
+        } />
+      </Routes>
     </TooltipProvider>
   </QueryClientProvider>
+</BrowserRouter>
 );
 
 export default App;
