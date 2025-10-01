@@ -63,14 +63,14 @@ export default function Timesheets() {
     }
     
     const id = directEmployeeId.trim();
-    console.info('[Timesheets] Opening timecard for employee:', id, '-> /timecard/' + id + '/biweekly');
-    navigate(`/timecard/${id}/biweekly`, { replace: false });
+    console.info('[Timesheets] Opening timecard for employee:', id, '-> /timecard/' + id + '/biweekly-adp');
+    navigate(`/timecard/${id}/biweekly-adp`, { replace: false });
     setDirectEmployeeId("");
   };
 
   const handleViewTimecard = (employeeNumber: string) => {
-    console.info('[Timesheets] View Timecard clicked for:', employeeNumber, '-> /timecard/' + employeeNumber + '/biweekly');
-    navigate(`/timecard/${employeeNumber}/biweekly`, { replace: false });
+    console.info('[Timesheets] View Timecard clicked for:', employeeNumber, '-> /timecard/' + employeeNumber + '/biweekly-adp');
+    navigate(`/timecard/${employeeNumber}/biweekly-adp`, { replace: false });
   };
 
   // Calculate stats

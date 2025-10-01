@@ -16,6 +16,7 @@ import UserManagement from "./pages/UserManagement";
 import Timesheets from "./pages/Timesheets";
 import IndividualTimecardMinimal from "./pages/IndividualTimecardMinimal";
 import BiWeeklyTimecard from "./pages/BiWeeklyTimecard";
+import BiWeeklyTimecardADP from "./pages/BiWeeklyTimecardADP";
 import TimecardRedirect from "./pages/TimecardRedirect";
 import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
@@ -86,6 +87,14 @@ const App = () => (
                 <Route path="/employees/:id" element={<EmployeeProfile />} />
                 <Route path="/user-management" element={<UserManagement />} />
             <Route path="/timesheets" element={<Timesheets />} />
+            <Route 
+              path="/timecard/:employeeId/biweekly-adp" 
+              element={
+                <AuthGuard>
+                  <BiWeeklyTimecardADP />
+                </AuthGuard>
+              } 
+            />
             <Route 
               path="/timecard/:employeeId/biweekly" 
               element={

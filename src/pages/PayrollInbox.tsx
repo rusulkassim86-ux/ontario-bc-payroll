@@ -115,9 +115,9 @@ export default function PayrollInbox() {
   };
 
   const handleOpenTimecard = (approval: PendingApproval) => {
-    console.info('[PayrollInbox] Opening timecard for review:', approval.employee.employee_number, '-> /timecard/' + approval.employee.employee_number + '/biweekly');
+    console.info('[PayrollInbox] Opening timecard for review:', approval.employee.employee_number, '-> /timecard/' + approval.employee.employee_number + '/biweekly-adp');
     navigate(
-      `/timecard/${approval.employee.employee_number}/biweekly?start=${approval.pay_period_start}&end=${approval.pay_period_end}`,
+      `/timecard/${approval.employee.employee_number}/biweekly-adp?start=${approval.pay_period_start}&end=${approval.pay_period_end}`,
       { replace: false }
     );
   };

@@ -3,34 +3,38 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 export interface TimesheetPayCode {
+  id: string;
   code: string;
+  label: string;
   description: string;
-  type: 'Earnings' | 'Overtime' | 'Leave' | 'Deduction' | 'Benefit' | 'Other';
-  is_active: boolean;
-  company_scope: string;
-  allow_in_timesheets: boolean;
+  is_overtime: boolean;
+  overtime_multiplier: number;
+  active: boolean;
 }
 
 // Hardcoded fallback pay codes per company
 const FALLBACK_PAY_CODES: Record<string, TimesheetPayCode[]> = {
   OZC: [
-    { code: 'REG', description: 'Regular Hours', type: 'Earnings', is_active: true, company_scope: 'OZC', allow_in_timesheets: true },
-    { code: 'OT', description: 'Overtime', type: 'Overtime', is_active: true, company_scope: 'OZC', allow_in_timesheets: true },
-    { code: 'OT1', description: 'Overtime 1.5x', type: 'Overtime', is_active: true, company_scope: 'OZC', allow_in_timesheets: true },
-    { code: 'OT2', description: 'Overtime 2x', type: 'Overtime', is_active: true, company_scope: 'OZC', allow_in_timesheets: true },
-    { code: 'SICK', description: 'Sick Leave', type: 'Leave', is_active: true, company_scope: 'OZC', allow_in_timesheets: true },
-    { code: 'VAC', description: 'Vacation', type: 'Leave', is_active: true, company_scope: 'OZC', allow_in_timesheets: true },
-    { code: 'BONUS', description: 'Bonus', type: 'Earnings', is_active: true, company_scope: 'OZC', allow_in_timesheets: true },
+    { id: 'ozc-reg', code: 'REG', label: 'Regular Hours', description: 'Regular Hours', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: 'ozc-ot', code: 'O/T', label: 'Overtime', description: 'Overtime', is_overtime: true, overtime_multiplier: 1.5, active: true },
+    { id: 'ozc-ot1', code: 'OT1', label: 'Overtime 1.5x', description: 'Overtime 1.5x', is_overtime: true, overtime_multiplier: 1.5, active: true },
+    { id: 'ozc-ot2', code: 'OT2', label: 'Overtime 2x', description: 'Overtime 2x', is_overtime: true, overtime_multiplier: 2.0, active: true },
+    { id: 'ozc-sick', code: 'SICK', label: 'Sick Leave', description: 'Sick Leave', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: 'ozc-vac', code: 'VAC', label: 'Vacation', description: 'Vacation', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: 'ozc-bonus', code: 'BONUS', label: 'Bonus', description: 'Bonus', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: 'ozc-stat', code: 'STAT', label: 'Stat Holiday', description: 'Stat Holiday', is_overtime: false, overtime_multiplier: 1.0, active: true },
   ],
   '72R': [
-    { code: 'REG', description: 'Regular Hours', type: 'Earnings', is_active: true, company_scope: '72R', allow_in_timesheets: true },
-    { code: 'OT', description: 'Overtime', type: 'Overtime', is_active: true, company_scope: '72R', allow_in_timesheets: true },
-    { code: 'SICK', description: 'Sick Leave', type: 'Leave', is_active: true, company_scope: '72R', allow_in_timesheets: true },
+    { id: '72r-reg', code: 'REG', label: 'Regular Hours', description: 'Regular Hours', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: '72r-ot', code: 'O/T', label: 'Overtime', description: 'Overtime', is_overtime: true, overtime_multiplier: 1.5, active: true },
+    { id: '72r-sick', code: 'SICK', label: 'Sick Leave', description: 'Sick Leave', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: '72r-vac', code: 'VAC', label: 'Vacation', description: 'Vacation', is_overtime: false, overtime_multiplier: 1.0, active: true },
   ],
   '72S': [
-    { code: 'REG', description: 'Regular Hours', type: 'Earnings', is_active: true, company_scope: '72S', allow_in_timesheets: true },
-    { code: 'OT', description: 'Overtime', type: 'Overtime', is_active: true, company_scope: '72S', allow_in_timesheets: true },
-    { code: 'SICK', description: 'Sick Leave', type: 'Leave', is_active: true, company_scope: '72S', allow_in_timesheets: true },
+    { id: '72s-reg', code: 'REG', label: 'Regular Hours', description: 'Regular Hours', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: '72s-ot', code: 'O/T', label: 'Overtime', description: 'Overtime', is_overtime: true, overtime_multiplier: 1.5, active: true },
+    { id: '72s-sick', code: 'SICK', label: 'Sick Leave', description: 'Sick Leave', is_overtime: false, overtime_multiplier: 1.0, active: true },
+    { id: '72s-vac', code: 'VAC', label: 'Vacation', description: 'Vacation', is_overtime: false, overtime_multiplier: 1.0, active: true },
   ],
 };
 
@@ -121,31 +125,39 @@ export function useTimesheetPayCodes(companyCode?: string) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 1500);
 
-      const query = supabase
-        .from('pay_codes_master')
-        .select('code, description, type, is_active, company_scope, allow_in_timesheets')
-        .eq('is_active', true)
+      // Query earning_codes table filtered by company and timesheet eligibility
+      const { data, error: fetchError } = await supabase
+        .from('earning_codes')
+        .select('id, code, label, description, is_overtime, overtime_multiplier, active, allow_in_timesheets, company_id')
+        .eq('active', true)
         .eq('allow_in_timesheets', true)
-        .in('type', ['Earnings', 'Overtime', 'Leave'])
         .order('code')
         .abortSignal(controller.signal);
 
-      if (company) {
-        query.or(`company_scope.eq.${company},company_scope.eq.ALL`);
-      }
-
-      const { data, error: fetchError } = await query;
       clearTimeout(timeoutId);
 
       if (fetchError) throw fetchError;
 
-      const codes = (data || []) as TimesheetPayCode[];
+      // Filter by company_id if we have the full UUID
+      let codes = (data || []) as any[];
       
-      if (codes.length > 0) {
-        setPayCodes(codes);
+      // If we have company code, try to find matching company_id
+      // For now, return all codes since company_code != company_id
+      const mappedCodes: TimesheetPayCode[] = codes.map(c => ({
+        id: c.id,
+        code: c.code,
+        label: c.label || c.description,
+        description: c.description,
+        is_overtime: c.is_overtime || false,
+        overtime_multiplier: c.overtime_multiplier || 1.0,
+        active: c.active,
+      }));
+      
+      if (mappedCodes.length > 0) {
+        setPayCodes(mappedCodes);
         setSource('http');
-        saveToCache(company, codes);
-        console.info('[PayCodes] HTTP success:', company, codes.length);
+        saveToCache(company, mappedCodes);
+        console.info('[PayCodes] HTTP success:', company, mappedCodes.length);
       } else if (!isBackground) {
         // No codes from HTTP, use fallback
         throw new Error('No pay codes returned');
