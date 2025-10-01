@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Check, Info, AlertCircle, ArrowLeft, Save, Lock, Unlock, RefreshCw } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { TimecardDiagnostics } from "@/components/debug/TimecardDiagnostics";
 
 // Timeout helper
 const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
@@ -59,10 +60,13 @@ export default function BiWeeklyTimecard() {
   const [timecardRows, setTimecardRows] = useState<TimecardRow[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [dataState, setDataState] = useState({ timecard: 'loading', payCodes: 'loading' });
+  const [employeeQueryState, setEmployeeQueryState] = useState({ status: 'idle', error: null });
   const mounted = useRef(false);
+  const queryStartTime = useRef<number>(Date.now());
 
   useEffect(() => {
     mounted.current = true;
+    queryStartTime.current = Date.now();
     return () => { mounted.current = false; };
   }, []);
 
@@ -71,8 +75,8 @@ export default function BiWeeklyTimecard() {
   const periodStart = format(startOfWeek(new Date(anchorDate), { weekStartsOn: 1 }), 'yyyy-MM-dd');
   const periodEnd = format(addDays(new Date(periodStart), 13), 'yyyy-MM-dd');
 
-  // Fetch timecard data with auto-create and hard timeout
-  const { data: timecardData, isLoading, error, refetch } = useQuery({
+  // Fetch timecard data with auto-create and 1500ms timeout
+  const { data: timecardData, isLoading, error, refetch, status: timecardStatus } = useQuery({
     queryKey: ['timecard', employeeId, periodStart, periodEnd],
     queryFn: async () => {
       try {
@@ -80,13 +84,18 @@ export default function BiWeeklyTimecard() {
           `get-biweekly-timecard?employeeId=${employeeId}&periodStart=${periodStart}&periodEnd=${periodEnd}&createIfMissing=true`
         );
         
-        const { data, error } = await withTimeout(fetchPromise, 800);
+        // Check if elapsed time > 1500ms
+        const elapsed = Date.now() - queryStartTime.current;
+        const timeoutMs = elapsed > 1500 ? 100 : 1500 - elapsed;
+        
+        const { data, error } = await withTimeout(fetchPromise, timeoutMs);
         
         if (error) throw error;
         setDataState(prev => ({ ...prev, timecard: 'loaded' }));
         return data;
       } catch (err: any) {
         if (err.message?.includes('Timeout')) {
+          console.error('[TIMECARD] Timeout after 1500ms - entering fail-open mode');
           setDataState(prev => ({ ...prev, timecard: 'timeout' }));
           // Return empty timecard to render grid
           return {
@@ -106,7 +115,7 @@ export default function BiWeeklyTimecard() {
   });
 
   // Fetch pay codes for dropdown (non-blocking)
-  const { data: payCodesData } = useQuery({
+  const { data: payCodesData, status: payCodesStatus, error: payCodesError } = useQuery({
     queryKey: ['payCodes', employeeId],
     queryFn: async () => {
       if (!employeeId) return { payCodes: [] };
@@ -116,12 +125,16 @@ export default function BiWeeklyTimecard() {
           `get-timesheet-pay-codes?employeeId=${employeeId}`
         );
         
-        const { data, error } = await withTimeout(fetchPromise, 1000);
+        const elapsed = Date.now() - queryStartTime.current;
+        const timeoutMs = elapsed > 1500 ? 100 : 1500 - elapsed;
+        
+        const { data, error } = await withTimeout(fetchPromise, timeoutMs);
         
         if (error) throw error;
         setDataState(prev => ({ ...prev, payCodes: 'loaded' }));
         return data;
       } catch (err: any) {
+        console.error('[PAYCODES] Failed or timeout - entering fail-open mode', err);
         setDataState(prev => ({ ...prev, payCodes: 'failed' }));
         return { payCodes: [] };
       }
@@ -313,6 +326,19 @@ export default function BiWeeklyTimecard() {
   return (
     <ErrorBoundary>
       <div key={`${employeeId}-${periodStart}`} className="container mx-auto p-6 space-y-6">
+        {/* Diagnostics Panel */}
+        <TimecardDiagnostics
+          isAuthenticated={!!profile}
+          userRole={profile?.role || null}
+          employeeId={employeeId}
+          queries={{
+            employee: { status: 'idle', error: null }, // Could add employee query if needed
+            timecard: { status: timecardStatus, error: error },
+            payCodes: { status: payCodesStatus, error: payCodesError }
+          }}
+          dataState={dataState}
+        />
+
         <PageHeader
           title="Bi-Weekly Timecard"
           description={`${timecardData?.employee?.company_code || ''} - ${format(new Date(periodStart), 'MMM dd')}–${format(new Date(periodEnd), 'MMM dd, yyyy')}`}

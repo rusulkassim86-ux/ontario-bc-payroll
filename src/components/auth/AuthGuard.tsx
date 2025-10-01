@@ -18,6 +18,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return () => { mounted.current = false; };
   }, []);
 
+  // Log guard redirects
+  useEffect(() => {
+    if (!loading && !user && mounted.current) {
+      if (typeof (window as any).__logGuardRedirect === 'function') {
+        (window as any).__logGuardRedirect('AuthGuard', '/auth', 'User not authenticated');
+      }
+    }
+  }, [loading, user]);
+
   if (loading && !mounted.current) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
