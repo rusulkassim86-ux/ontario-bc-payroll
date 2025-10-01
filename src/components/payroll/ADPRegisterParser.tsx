@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, Eye } from "lucide-react";
 
 interface ParseResult {
   success: boolean;
@@ -24,7 +26,50 @@ export function ADPRegisterParser() {
   const [parsing, setParsing] = useState(false);
   const [result, setResult] = useState<ParseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [earningCodes, setEarningCodes] = useState<any[]>([]);
+  const [deductionCodes, setDeductionCodes] = useState<any[]>([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const { toast } = useToast();
+
+  const loadExistingCodes = async () => {
+    setLoadingPreview(true);
+    try {
+      const [earningsRes, deductionsRes] = await Promise.all([
+        supabase
+          .from('earning_codes')
+          .select('code, description, is_taxable_federal, is_taxable_provincial, is_cpp_pensionable, is_ei_insurable')
+          .limit(50)
+          .order('code'),
+        supabase
+          .from('deduction_codes')
+          .select('code, label, category, is_employer_contribution, maps_to, active')
+          .limit(50)
+          .order('code')
+      ]);
+
+      if (earningsRes.error) throw earningsRes.error;
+      if (deductionsRes.error) throw deductionsRes.error;
+
+      setEarningCodes(earningsRes.data || []);
+      setDeductionCodes(deductionsRes.data || []);
+    } catch (err: any) {
+      console.error('Error loading codes:', err);
+      toast({
+        title: "Failed to load codes",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showPreview) {
+      loadExistingCodes();
+    }
+  }, [showPreview]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -159,6 +204,124 @@ export function ADPRegisterParser() {
             </div>
           </div>
         )}
+
+        <div className="mt-6 pt-6 border-t">
+          <Button
+            onClick={() => {
+              setShowPreview(!showPreview);
+              if (!showPreview) loadExistingCodes();
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            <Eye className="mr-2 h-4 w-4" />
+            {showPreview ? 'Hide' : 'Show'} Current Pay Codes
+          </Button>
+
+          {showPreview && (
+            <div className="mt-4 space-y-6">
+              {loadingPreview ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Earning Codes ({earningCodes.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-auto max-h-96">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Code</TableHead>
+                              <TableHead>Label</TableHead>
+                              <TableHead>Tax Fed</TableHead>
+                              <TableHead>Tax Prov</TableHead>
+                              <TableHead>CPP</TableHead>
+                              <TableHead>EI</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {earningCodes.map((code) => (
+                              <TableRow key={code.code}>
+                                <TableCell className="font-mono">{code.code}</TableCell>
+                                <TableCell>{code.description}</TableCell>
+                                <TableCell>
+                                  <Badge variant={code.is_taxable_federal ? "default" : "secondary"}>
+                                    {code.is_taxable_federal ? 'Yes' : 'No'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={code.is_taxable_provincial ? "default" : "secondary"}>
+                                    {code.is_taxable_provincial ? 'Yes' : 'No'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={code.is_cpp_pensionable ? "default" : "secondary"}>
+                                    {code.is_cpp_pensionable ? 'Yes' : 'No'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={code.is_ei_insurable ? "default" : "secondary"}>
+                                    {code.is_ei_insurable ? 'Yes' : 'No'}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Deduction Codes ({deductionCodes.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-auto max-h-96">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Code</TableHead>
+                              <TableHead>Label</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Employer Contrib</TableHead>
+                              <TableHead>Maps To</TableHead>
+                              <TableHead>Active</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {deductionCodes.map((code) => (
+                              <TableRow key={code.code}>
+                                <TableCell className="font-mono">{code.code}</TableCell>
+                                <TableCell>{code.label}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{code.category || 'N/A'}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={code.is_employer_contribution ? "default" : "secondary"}>
+                                    {code.is_employer_contribution ? 'Yes' : 'No'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">{code.maps_to || '-'}</TableCell>
+                                <TableCell>
+                                  <Badge variant={code.active ? "default" : "destructive"}>
+                                    {code.active ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
