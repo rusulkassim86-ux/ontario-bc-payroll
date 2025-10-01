@@ -34,6 +34,8 @@ import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
 import { PortalApp } from "./portal/PortalApp";
 import QuickHire from "./pages/QuickHire";
+import PayrollInbox from "./pages/PayrollInbox";
+import NotificationSettings from "./pages/NotificationSettings";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +96,8 @@ const App = () => (
             <Route path="/devices" element={<Devices />} />
             <Route path="/hire/new" element={<QuickHire />} />
             <Route path="/punch-config" element={<PunchConfig />} />
+            <Route path="/payroll-inbox" element={<PayrollInbox />} />
+            <Route path="/notification-settings" element={<NotificationSettings />} />
             <Route path="/dev/routes" element={<DevRoutes />} />
               <Route path="/admin/codes" element={
                 <Suspense fallback={<div>Loading...</div>}>

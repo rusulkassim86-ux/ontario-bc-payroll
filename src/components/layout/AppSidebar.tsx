@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus, Code, FileArchive } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus, Code, FileArchive, FileCheck } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -12,6 +12,7 @@ import {
   SidebarFooter
 } from "@/components/ui/sidebar";
 import { SecurityStatusBadge } from "@/components/security/SecurityStatusBadge";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useLocation } from "react-router-dom";
 
 const menuGroups = {
@@ -23,6 +24,7 @@ const menuGroups = {
   ],
   "Payroll Processing": [
     { title: "Payroll", url: "/payroll", icon: Calculator },
+    { title: "Payroll Inbox", url: "/payroll-inbox", icon: FileCheck },
     { title: "Pay Codes Master", url: "/pay-codes-master", icon: List },
   ],
   "Reports & Compliance": [
@@ -33,6 +35,7 @@ const menuGroups = {
   ],
   "Administration": [
     { title: "Company", url: "/company", icon: Building2 },
+    { title: "Notification Settings", url: "/notification-settings", icon: Settings },
     { title: "Codes Management", url: "/admin/codes", icon: Code },
     { title: "CRA Integration", url: "/admin/cra-integration", icon: Settings },
     { title: "User Management", url: "/user-management", icon: UserCog },
@@ -53,14 +56,17 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-            <Calculator className="w-4 h-4 text-white" />
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+              <Calculator className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-foreground">PayrollPro</h1>
+              <p className="text-xs text-muted-foreground">Canadian Payroll</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-foreground">PayrollPro</h1>
-            <p className="text-xs text-muted-foreground">Canadian Payroll</p>
-          </div>
+          <NotificationBell />
         </div>
       </SidebarHeader>
       
