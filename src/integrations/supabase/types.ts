@@ -3287,6 +3287,7 @@ export type Database = {
           notes: string | null
           pay_calendar_id: string
           pay_code: string | null
+          pay_code_id: string | null
           pay_period_end: string | null
           pay_period_start: string | null
           project_code: string | null
@@ -3315,6 +3316,7 @@ export type Database = {
           notes?: string | null
           pay_calendar_id: string
           pay_code?: string | null
+          pay_code_id?: string | null
           pay_period_end?: string | null
           pay_period_start?: string | null
           project_code?: string | null
@@ -3343,6 +3345,7 @@ export type Database = {
           notes?: string | null
           pay_calendar_id?: string
           pay_code?: string | null
+          pay_code_id?: string | null
           pay_period_end?: string | null
           pay_period_start?: string | null
           project_code?: string | null
@@ -3372,6 +3375,13 @@ export type Database = {
             columns: ["pay_calendar_id"]
             isOneToOne: false
             referencedRelation: "pay_calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_pay_code_id_fkey"
+            columns: ["pay_code_id"]
+            isOneToOne: false
+            referencedRelation: "pay_codes_master"
             referencedColumns: ["id"]
           },
         ]

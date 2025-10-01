@@ -470,6 +470,15 @@ export default function IndividualTimecardMinimal() {
     }
 
     try {
+      // Get pay code IDs from master table for proper foreign key reference
+      const uniquePayCodes = [...new Set(entries.map(e => e.payCode).filter(Boolean))];
+      const { data: payCodesData } = await supabase
+        .from('pay_codes_master')
+        .select('id, code')
+        .in('code', uniquePayCodes);
+      
+      const payCodeIdMap = new Map(payCodesData?.map(pc => [pc.code, pc.id]) || []);
+
       // Prepare timesheet data for saving
       const timesheetData = entries.map(entry => {
         // Map hours to appropriate columns based on pay code
@@ -501,11 +510,15 @@ export default function IndividualTimecardMinimal() {
             hours_other = entry.hours;
         }
         
+        // Get pay_code_id from master table
+        const payCodeId = payCodeIdMap.get(entry.payCode);
+        
         return {
           employee_id: employeeData.id,
           pay_calendar_id: calendarId,
           work_date: format(entry.date, 'yyyy-MM-dd'),
           pay_code: entry.payCode,
+          pay_code_id: payCodeId || null,
           time_in: entry.timeIn || null,
           time_out: entry.timeOut || null,
           hours_regular,
