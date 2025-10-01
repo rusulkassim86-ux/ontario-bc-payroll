@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthProvider';
 import { LoginForm } from './LoginForm';
 import { SignUpForm } from './SignUpForm';
@@ -11,8 +11,14 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading } = useAuth();
   const [showSignUp, setShowSignUp] = useState(false);
+  const mounted = useRef(false);
 
-  if (loading) {
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  if (loading && !mounted.current) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
         <div className="text-center">

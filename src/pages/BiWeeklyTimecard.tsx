@@ -66,6 +66,10 @@ export default function BiWeeklyTimecard() {
       return data;
     },
     enabled: !!employeeId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 
   // Fetch pay codes for dropdown
@@ -82,6 +86,8 @@ export default function BiWeeklyTimecard() {
       return data;
     },
     enabled: !!employeeId,
+    staleTime: 300_000,
+    refetchOnWindowFocus: false,
   });
 
   // Initialize timecard rows
@@ -258,7 +264,7 @@ export default function BiWeeklyTimecard() {
 
   return (
     <ErrorBoundary>
-      <div className="container mx-auto p-6 space-y-6">
+      <div key={`${employeeId}-${periodStart}`} className="container mx-auto p-6 space-y-6">
         <PageHeader
           title="Bi-Weekly Timecard"
           description={`${timecardData?.employee?.company_code || ''} - ${format(new Date(periodStart), 'MMM dd')}–${format(new Date(periodEnd), 'MMM dd, yyyy')}`}
