@@ -36,3 +36,6 @@ verify_jwt = true
 
 [functions.export-gl-journal]
 verify_jwt = true
+
+[functions.parse-adp-register]
+verify_jwt = true

@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Settings, Upload, FileText } from 'lucide-react';
 import { usePayCodesMaster, PayCodeMaster } from '@/hooks/usePayCodesMaster';
 import { ADPImportWizard } from './ADPImportWizard';
+import { ADPRegisterParser } from './ADPRegisterParser';
 import { PayCodeMasterForm } from './PayCodeMasterForm';
 import {
   Dialog,
@@ -282,6 +283,7 @@ export function PayCodesMasterPage() {
         </TabsContent>
 
         <TabsContent value="import" className="space-y-6">
+          <ADPRegisterParser />
           <ADPImportWizard />
         </TabsContent>
       </Tabs>
