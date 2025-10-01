@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,14 @@ export default function IndividualTimecardMinimal() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Clear caches on mount to force fresh data
+  useEffect(() => {
+    queryClient.removeQueries({ queryKey: ['timesheets'] });
+    queryClient.removeQueries({ queryKey: ['employees'] });
+    console.log('[timecard] Cleared React Query caches for fresh data');
+  }, [queryClient]);
   
   // Debug logging for route param verification
   console.info('[timecard] employeeId=', employeeId);

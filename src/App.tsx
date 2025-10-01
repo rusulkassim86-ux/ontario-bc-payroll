@@ -32,12 +32,19 @@ const CRAIntegration = lazy(() => import('@/pages/CRAIntegration'));
 const CRAYearPack = lazy(() => import('@/pages/CRAYearPack'));
 import { PayCodesMasterPage } from "./components/payroll/PayCodesMasterPage";
 import { HTTPSEnforcer } from "./components/security/HTTPSEnforcer";
-import { PortalApp } from "./portal/PortalApp";
 import QuickHire from "./pages/QuickHire";
 import PayrollInbox from "./pages/PayrollInbox";
 import NotificationSettings from "./pages/NotificationSettings";
+import { APP_FEATURES } from "./config/features";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 3,
+    },
+  },
+});
 
 // Debug: Log all registered routes for verification
 console.table([
@@ -65,71 +72,71 @@ const App = () => (
   <BrowserRouter>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <HTTPSEnforcer />
-        <Toaster />
-        <Sonner />
-        <Routes>
-          {/* Portal routes - use shared QueryClient but separate auth */}
-          <Route path="/portal/*" element={<PortalApp />} />
-          
-          {/* Main app routes - require AuthGuard */}
-          <Route path="/*" element={
-            <AuthProvider>
-              <AuthGuard>
-                <AppLayout>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/company" element={<Company />} />
-                    <Route path="/employees" element={<Employees />} />
-                    <Route path="/employees/:id" element={<EmployeeProfile />} />
-                    <Route path="/user-management" element={<UserManagement />} />
-                    <Route path="/timesheets" element={<Timesheets />} />
-                    <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
-                    <Route path="/timecard" element={<TimecardRedirect />} />
-                    <Route path="/payroll" element={<Payroll />} />
-                    <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/cra-remittances" element={<CRARemittances />} />
-                    <Route path="/payroll-calculator" element={
-                      <React.Suspense fallback={<div>Loading...</div>}>
-                        {React.createElement(React.lazy(() => import('./pages/PayrollCalculator')))}
-                      </React.Suspense>
-                    } />
-                    <Route path="/security-center" element={<SecurityCenter />} />
-                    <Route path="/backup-restore" element={<BackupRestore />} />
-                    <Route path="/device-mapping" element={<DeviceMapping />} />
-                    <Route path="/punch-feed" element={<PunchFeed />} />
-                    <Route path="/devices" element={<Devices />} />
-                    <Route path="/hire/new" element={<QuickHire />} />
-                    <Route path="/punch-config" element={<PunchConfig />} />
+        <AuthProvider>
+          <HTTPSEnforcer />
+          <AuthGuard>
+            <Toaster />
+            <Sonner />
+            <AppLayout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/company" element={<Company />} />
+                <Route path="/employees" element={<Employees />} />
+                <Route path="/employees/:id" element={<EmployeeProfile />} />
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/timesheets" element={<Timesheets />} />
+                <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
+                <Route path="/timesheets/:employeeId/biweekly" element={<IndividualTimecardMinimal />} />
+                <Route path="/timecard" element={<TimecardRedirect />} />
+                <Route path="/payroll" element={<Payroll />} />
+                <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/cra-remittances" element={<CRARemittances />} />
+                <Route path="/payroll-calculator" element={
+                  <React.Suspense fallback={<div>Loading...</div>}>
+                    {React.createElement(React.lazy(() => import('./pages/PayrollCalculator')))}
+                  </React.Suspense>
+                } />
+                <Route path="/security-center" element={<SecurityCenter />} />
+                <Route path="/backup-restore" element={<BackupRestore />} />
+                <Route path="/device-mapping" element={<DeviceMapping />} />
+                <Route path="/punch-feed" element={<PunchFeed />} />
+                <Route path="/devices" element={<Devices />} />
+                <Route path="/hire/new" element={<QuickHire />} />
+                <Route path="/punch-config" element={<PunchConfig />} />
+                
+                {/* Notification features - only if enabled */}
+                {APP_FEATURES.timesheetsNotifications && (
+                  <>
                     <Route path="/payroll-inbox" element={<PayrollInbox />} />
                     <Route path="/notification-settings" element={<NotificationSettings />} />
-                    <Route path="/dev/routes" element={<DevRoutes />} />
-                    <Route path="/admin/codes" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <AdminCodes />
-                      </Suspense>
-                    } />
-                    <Route path="/admin/cra-integration" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <CRAIntegration />
-                      </Suspense>
-                    } />
-                    <Route path="/admin/cra-year-pack" element={
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <CRAYearPack />
-                      </Suspense>
-                    } />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AppLayout>
-            </AuthGuard>
-          </AuthProvider>
-        } />
-      </Routes>
-    </TooltipProvider>
-  </QueryClientProvider>
-</BrowserRouter>
+                  </>
+                )}
+                
+                <Route path="/dev/routes" element={<DevRoutes />} />
+                <Route path="/admin/codes" element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <AdminCodes />
+                  </Suspense>
+                } />
+                <Route path="/admin/cra-integration" element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <CRAIntegration />
+                  </Suspense>
+                } />
+                <Route path="/admin/cra-year-pack" element={
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <CRAYearPack />
+                  </Suspense>
+                } />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AppLayout>
+          </AuthGuard>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </BrowserRouter>
 );
 
 export default App;

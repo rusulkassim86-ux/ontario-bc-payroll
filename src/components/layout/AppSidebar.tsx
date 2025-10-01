@@ -14,44 +14,50 @@ import {
 import { SecurityStatusBadge } from "@/components/security/SecurityStatusBadge";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useLocation } from "react-router-dom";
+import { APP_FEATURES } from "@/config/features";
 
-const menuGroups = {
-  "Main": [
-    { title: "Dashboard", url: "/", icon: Home },
-    { title: "Quick Hire", url: "/hire/new", icon: UserPlus },
-    { title: "Employees", url: "/employees", icon: Users },
-    { title: "Timesheets", url: "/timesheets", icon: Clock },
-  ],
-  "Payroll Processing": [
-    { title: "Payroll", url: "/payroll", icon: Calculator },
-    { title: "Payroll Inbox", url: "/payroll-inbox", icon: FileCheck },
-    { title: "Pay Codes Master", url: "/pay-codes-master", icon: List },
-  ],
-  "Reports & Compliance": [
-    { title: "Reports", url: "/reports", icon: BarChart3 },
-    { title: "CRA Remittances", url: "/cra-remittances", icon: Receipt },
-    { title: "CRA Year Pack & Filing", url: "/admin/cra-year-pack", icon: FileArchive },
-    { title: "Payroll Calculator", url: "/payroll-calculator", icon: FileSpreadsheet },
-  ],
-  "Administration": [
-    { title: "Company", url: "/company", icon: Building2 },
-    { title: "Notification Settings", url: "/notification-settings", icon: Settings },
-    { title: "Codes Management", url: "/admin/codes", icon: Code },
-    { title: "CRA Integration", url: "/admin/cra-integration", icon: Settings },
-    { title: "User Management", url: "/user-management", icon: UserCog },
-    { title: "Devices", url: "/devices", icon: Monitor },
-    { title: "Device Mapping", url: "/device-mapping", icon: Smartphone },
-    { title: "Punch Feed", url: "/punch-feed", icon: Zap },
-    { title: "Punch Config", url: "/punch-config", icon: Settings },
-  ],
-  "Security": [
-    { title: "Security Center", url: "/security-center", icon: Shield },
-    { title: "Backup & Restore", url: "/backup-restore", icon: HardDrive },
-  ],
+const getMenuGroups = () => {
+  const baseGroups: Record<string, Array<{ title: string; url: string; icon: any }>> = {
+    "Main": [
+      { title: "Dashboard", url: "/", icon: Home },
+      { title: "Quick Hire", url: "/hire/new", icon: UserPlus },
+      { title: "Employees", url: "/employees", icon: Users },
+      { title: "Timesheets", url: "/timesheets", icon: Clock },
+    ],
+    "Payroll Processing": [
+      { title: "Payroll", url: "/payroll", icon: Calculator },
+      ...(APP_FEATURES.timesheetsNotifications ? [{ title: "Payroll Inbox", url: "/payroll-inbox", icon: FileCheck }] : []),
+      { title: "Pay Codes Master", url: "/pay-codes-master", icon: List },
+    ],
+    "Reports & Compliance": [
+      { title: "Reports", url: "/reports", icon: BarChart3 },
+      { title: "CRA Remittances", url: "/cra-remittances", icon: Receipt },
+      { title: "CRA Year Pack & Filing", url: "/admin/cra-year-pack", icon: FileArchive },
+      { title: "Payroll Calculator", url: "/payroll-calculator", icon: FileSpreadsheet },
+    ],
+    "Administration": [
+      { title: "Company", url: "/company", icon: Building2 },
+      ...(APP_FEATURES.timesheetsNotifications ? [{ title: "Notification Settings", url: "/notification-settings", icon: Settings }] : []),
+      { title: "Codes Management", url: "/admin/codes", icon: Code },
+      { title: "CRA Integration", url: "/admin/cra-integration", icon: Settings },
+      { title: "User Management", url: "/user-management", icon: UserCog },
+      { title: "Devices", url: "/devices", icon: Monitor },
+      { title: "Device Mapping", url: "/device-mapping", icon: Smartphone },
+      { title: "Punch Feed", url: "/punch-feed", icon: Zap },
+      { title: "Punch Config", url: "/punch-config", icon: Settings },
+    ],
+    "Security": [
+      { title: "Security Center", url: "/security-center", icon: Shield },
+      { title: "Backup & Restore", url: "/backup-restore", icon: HardDrive },
+    ],
+  };
+  
+  return baseGroups;
 };
 
 export function AppSidebar() {
   const location = useLocation();
+  const menuGroups = getMenuGroups();
 
   return (
     <Sidebar>
@@ -66,7 +72,7 @@ export function AppSidebar() {
               <p className="text-xs text-muted-foreground">Canadian Payroll</p>
             </div>
           </div>
-          <NotificationBell />
+          {APP_FEATURES.timesheetsNotifications && <NotificationBell />}
         </div>
       </SidebarHeader>
       
