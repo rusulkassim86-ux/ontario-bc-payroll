@@ -52,6 +52,9 @@ export function ADPRegisterParser() {
 
       const { data, error: invokeError } = await supabase.functions.invoke('parse-adp-register', {
         body: formData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (invokeError) throw invokeError;

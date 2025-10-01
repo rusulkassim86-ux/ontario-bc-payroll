@@ -26,6 +26,37 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Get authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Not authenticated');
+    }
+
+    // Create client with user's auth
+    const userSupabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Get user's profile to get company_id
+    const { data: { user }, error: userError } = await userSupabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error('User profile not found');
+    }
+
+    const company_id = profile.company_id;
+
     const formData = await req.formData();
     const file = formData.get('file') as File;
     
@@ -43,6 +74,30 @@ Deno.serve(async (req) => {
     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
     console.log('Parsed rows:', data.length);
+
+    // Extract unique pay codes from the Excel data
+    const earningCodesFromFile = new Set<string>();
+    const deductionCodesFromFile = new Set<string>();
+
+    // Parse each row looking for pay code patterns
+    for (const row of data) {
+      for (const cell of row) {
+        if (typeof cell === 'string') {
+          const cellUpper = cell.trim().toUpperCase();
+          // Look for known earning codes
+          if (['REG', 'O/T', 'AVC', 'MSC', 'BRV', 'E04', 'E05', 'E06', 'E08', 'E09', 'E11', 'E12', 'E13', 'E14', '37', '38'].includes(cellUpper)) {
+            earningCodesFromFile.add(cellUpper);
+          }
+          // Look for known deduction codes
+          if (['FED', 'EI', 'CPP', 'DP1', 'LTD', 'UNION', '72S'].includes(cellUpper)) {
+            deductionCodesFromFile.add(cellUpper);
+          }
+        }
+      }
+    }
+
+    console.log('Found earning codes:', Array.from(earningCodesFromFile));
+    console.log('Found deduction codes:', Array.from(deductionCodesFromFile));
 
     // Define known codes with their mappings
     const earningCodes: PayCode[] = [
@@ -78,14 +133,19 @@ Deno.serve(async (req) => {
 
     console.log('Inserting earning codes...');
     
+    // Filter earning codes to only those found in the file (or use all if none found)
+    const earningCodesToInsert = earningCodesFromFile.size > 0 
+      ? earningCodes.filter(code => earningCodesFromFile.has(code.code))
+      : earningCodes;
+
     // Insert earning codes
     const { data: earningInserted, error: earningError } = await supabase
       .from('earning_codes')
       .upsert(
-        earningCodes.map(code => ({
+        earningCodesToInsert.map(code => ({
           code: code.code,
           description: code.label,
-          company_id: (req.headers.get('x-company-id') || ''), // Get from request context
+          company_id: company_id,
           is_taxable_federal: true,
           is_taxable_provincial: true,
           is_cpp_pensionable: true,
@@ -104,15 +164,20 @@ Deno.serve(async (req) => {
 
     console.log('Inserting deduction codes...');
 
+    // Filter deduction codes to only those found in the file (or use all if none found)
+    const deductionCodesToInsert = deductionCodesFromFile.size > 0
+      ? deductionCodes.filter(code => deductionCodesFromFile.has(code.code))
+      : deductionCodes;
+
     // Insert deduction codes
     const { data: deductionInserted, error: deductionError } = await supabase
       .from('deduction_codes')
       .upsert(
-        deductionCodes.map(code => ({
+        deductionCodesToInsert.map(code => ({
           code: code.code,
           label: code.label,
           description: code.label,
-          company_id: (req.headers.get('x-company-id') || ''),
+          company_id: company_id,
           category: code.category,
           is_employer_contribution: code.isEmployerContribution,
           maps_to: code.mapsTo,
@@ -154,13 +219,13 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         summary: {
-          earningCodes: earningCodes.length,
-          deductionCodes: deductionCodes.length,
+          earningCodes: earningCodesToInsert.length,
+          deductionCodes: deductionCodesToInsert.length,
           glMappings: glMappings.length,
         },
         codes: {
-          earnings: earningCodes,
-          deductions: deductionCodes,
+          earnings: earningCodesToInsert,
+          deductions: deductionCodesToInsert,
         },
       }),
       {
