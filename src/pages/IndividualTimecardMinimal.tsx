@@ -393,6 +393,7 @@ export default function IndividualTimecardMinimal() {
         stat: week1Entries.reduce((sum, e) => sum + (e.payCode === 'STAT' ? e.hours : 0), 0),
         vac: week1Entries.reduce((sum, e) => sum + (e.payCode === 'VAC' ? e.hours : 0), 0),
         sick: week1Entries.reduce((sum, e) => sum + (e.payCode === 'SICK' ? e.hours : 0), 0),
+        other: week1Entries.reduce((sum, e) => sum + (!['REG', 'OT', 'OT1', 'OT2', 'STAT', 'VAC', 'SICK'].includes(e.payCode) ? e.hours : 0), 0),
       });
 
       // Week 2 (days 7-13)
@@ -410,6 +411,7 @@ export default function IndividualTimecardMinimal() {
         stat: week2Entries.reduce((sum, e) => sum + (e.payCode === 'STAT' ? e.hours : 0), 0),
         vac: week2Entries.reduce((sum, e) => sum + (e.payCode === 'VAC' ? e.hours : 0), 0),
         sick: week2Entries.reduce((sum, e) => sum + (e.payCode === 'SICK' ? e.hours : 0), 0),
+        other: week2Entries.reduce((sum, e) => sum + (!['REG', 'OT', 'OT1', 'OT2', 'STAT', 'VAC', 'SICK'].includes(e.payCode) ? e.hours : 0), 0),
       });
     }
 
@@ -421,6 +423,7 @@ export default function IndividualTimecardMinimal() {
       stat: processedEntries.reduce((sum, e) => sum + (e.payCode === 'STAT' ? e.hours : 0), 0),
       vac: processedEntries.reduce((sum, e) => sum + (e.payCode === 'VAC' ? e.hours : 0), 0),
       sick: processedEntries.reduce((sum, e) => sum + (e.payCode === 'SICK' ? e.hours : 0), 0),
+      other: processedEntries.reduce((sum, e) => sum + (!['REG', 'OT', 'OT1', 'OT2', 'STAT', 'VAC', 'SICK'].includes(e.payCode) ? e.hours : 0), 0),
     };
 
     return {
@@ -461,25 +464,66 @@ export default function IndividualTimecardMinimal() {
 
     try {
       // Prepare timesheet data for saving
-      const timesheetData = entries.map(entry => ({
-        employee_id: employeeData.id,
-        pay_calendar_id: calendarId,
-        work_date: format(entry.date, 'yyyy-MM-dd'),
-        hours_regular: entry.payCode === 'REG' ? entry.hours : 0,
-        hours_ot1: entry.payCode === 'OT' || entry.payCode === 'OT1' ? entry.hours : 0,
-        hours_ot2: entry.payCode === 'OT2' ? entry.hours : 0,
-        hours_stat: entry.payCode === 'STAT' ? entry.hours : 0,
-        status: 'submitted',
-        pay_period_start: format(periodDates.start, 'yyyy-MM-dd'),
-        pay_period_end: format(periodDates.end, 'yyyy-MM-dd'),
-      }));
+      const timesheetData = entries.map(entry => {
+        // Map hours to appropriate columns based on pay code
+        let hours_regular = 0, hours_ot1 = 0, hours_ot2 = 0, hours_stat = 0;
+        let hours_vac = 0, hours_sick = 0, hours_other = 0;
+        
+        switch (entry.payCode) {
+          case 'REG':
+            hours_regular = entry.hours;
+            break;
+          case 'OT':
+          case 'OT1':
+            hours_ot1 = entry.hours;
+            break;
+          case 'OT2':
+            hours_ot2 = entry.hours;
+            break;
+          case 'STAT':
+            hours_stat = entry.hours;
+            break;
+          case 'VAC':
+            hours_vac = entry.hours;
+            break;
+          case 'SICK':
+            hours_sick = entry.hours;
+            break;
+          default:
+            // Any other pay codes go to hours_other
+            hours_other = entry.hours;
+        }
+        
+        return {
+          employee_id: employeeData.id,
+          pay_calendar_id: calendarId,
+          work_date: format(entry.date, 'yyyy-MM-dd'),
+          pay_code: entry.payCode,
+          time_in: entry.timeIn || null,
+          time_out: entry.timeOut || null,
+          hours_regular,
+          hours_ot1,
+          hours_ot2,
+          hours_stat,
+          hours_vac,
+          hours_sick,
+          hours_other,
+          department: entry.department,
+          status: 'submitted',
+          pay_period_start: format(periodDates.start, 'yyyy-MM-dd'),
+          pay_period_end: format(periodDates.end, 'yyyy-MM-dd'),
+        };
+      });
 
       // Filter out empty entries (no hours)
       const validEntries = timesheetData.filter(entry => 
         entry.hours_regular > 0 || 
         entry.hours_ot1 > 0 || 
         entry.hours_ot2 > 0 || 
-        entry.hours_stat > 0
+        entry.hours_stat > 0 ||
+        entry.hours_vac > 0 ||
+        entry.hours_sick > 0 ||
+        entry.hours_other > 0
       );
 
       if (validEntries.length === 0) {

@@ -3270,19 +3270,26 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          department: string | null
           employee_id: string
           hours_ot1: number
           hours_ot2: number
+          hours_other: number
           hours_regular: number
+          hours_sick: number
           hours_stat: number
+          hours_vac: number
           id: string
           locked_at: string | null
           notes: string | null
           pay_calendar_id: string
+          pay_code: string | null
           pay_period_end: string | null
           pay_period_start: string | null
           project_code: string | null
           status: string
+          time_in: string | null
+          time_out: string | null
           updated_at: string
           work_date: string
         }
@@ -3291,19 +3298,26 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          department?: string | null
           employee_id: string
           hours_ot1?: number
           hours_ot2?: number
+          hours_other?: number
           hours_regular?: number
+          hours_sick?: number
           hours_stat?: number
+          hours_vac?: number
           id?: string
           locked_at?: string | null
           notes?: string | null
           pay_calendar_id: string
+          pay_code?: string | null
           pay_period_end?: string | null
           pay_period_start?: string | null
           project_code?: string | null
           status?: string
+          time_in?: string | null
+          time_out?: string | null
           updated_at?: string
           work_date: string
         }
@@ -3312,19 +3326,26 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          department?: string | null
           employee_id?: string
           hours_ot1?: number
           hours_ot2?: number
+          hours_other?: number
           hours_regular?: number
+          hours_sick?: number
           hours_stat?: number
+          hours_vac?: number
           id?: string
           locked_at?: string | null
           notes?: string | null
           pay_calendar_id?: string
+          pay_code?: string | null
           pay_period_end?: string | null
           pay_period_start?: string | null
           project_code?: string | null
           status?: string
+          time_in?: string | null
+          time_out?: string | null
           updated_at?: string
           work_date?: string
         }
