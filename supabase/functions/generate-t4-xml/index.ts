@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createHash } from "https://deno.land/std@0.190.0/hash/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,7 +35,13 @@ serve(async (req) => {
 
     const { tax_year, environment = 'test' } = await req.json();
 
-    // Get company settings
+    // Get company and settings
+    const { data: company } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', profile.company_id)
+      .single();
+
     const { data: settings } = await supabase
       .from('company_settings')
       .select('*')
@@ -45,34 +52,62 @@ serve(async (req) => {
       throw new Error('Missing CRA filing credentials. Please configure BN, WAC, and transmitter contact in settings.');
     }
 
-    // Get T4 slips for the tax year
-    const { data: t4Slips, error: slipsError } = await supabase
-      .from('t4_slips')
+    // Get year-end summaries for the tax year
+    const { data: summaries, error: summariesError } = await supabase
+      .from('employee_year_end_summary')
       .select(`
         *,
         employees:employee_id (
+          id,
+          employee_number,
           first_name,
           last_name,
           sin_encrypted,
-          address
+          address,
+          province_code,
+          union_code
         )
       `)
       .eq('tax_year', tax_year)
-      .eq('status', 'approved');
+      .eq('is_finalized', true);
 
-    if (slipsError) throw slipsError;
-    if (!t4Slips || t4Slips.length === 0) {
-      throw new Error('No approved T4 slips found for this tax year');
+    if (summariesError) throw summariesError;
+    if (!summaries || summaries.length === 0) {
+      throw new Error('No finalized year-end summaries found for this tax year. Please finalize employee year-end data first.');
     }
 
-    // Validate T4 data
+    // Validate employee data
     const errors: string[] = [];
-    t4Slips.forEach((slip: any, index: number) => {
-      if (!slip.employees?.sin_encrypted) {
-        errors.push(`Employee ${index + 1}: Missing SIN`);
+    const validatedSlips: any[] = [];
+
+    summaries.forEach((summary: any, index: number) => {
+      const emp = summary.employees;
+      const rowNum = index + 1;
+      
+      // Required field validation
+      if (!emp?.sin_encrypted) {
+        errors.push(`Row ${rowNum} (${emp?.first_name} ${emp?.last_name}): Missing SIN`);
       }
-      if (!slip.box_14_employment_income) {
-        errors.push(`Employee ${index + 1}: Missing employment income (Box 14)`);
+      if (!emp?.province_code) {
+        errors.push(`Row ${rowNum} (${emp?.first_name} ${emp?.last_name}): Missing province`);
+      }
+      if (!summary.total_employment_income || summary.total_employment_income <= 0) {
+        errors.push(`Row ${rowNum} (${emp?.first_name} ${emp?.last_name}): Missing or invalid employment income (Box 14)`);
+      }
+
+      // Box-level validation
+      if (summary.total_cpp_contributions && !summary.total_cpp_pensionable) {
+        errors.push(`Row ${rowNum} (${emp?.first_name} ${emp?.last_name}): CPP contributions reported (Box 16) but no pensionable earnings (Box 26)`);
+      }
+      if (summary.total_ei_premiums && !summary.total_ei_insurable) {
+        errors.push(`Row ${rowNum} (${emp?.first_name} ${emp?.last_name}): EI premiums reported (Box 18) but no insurable earnings (Box 24)`);
+      }
+
+      if (errors.length === 0) {
+        validatedSlips.push({
+          employee: emp,
+          summary: summary
+        });
       }
     });
 
@@ -90,7 +125,7 @@ serve(async (req) => {
       );
     }
 
-    // Generate T4 XML according to CRA schema
+    // Generate T4 XML with all boxes
     const xml = generateT4XML({
       environment,
       transmitter: {
@@ -99,32 +134,69 @@ serve(async (req) => {
         email: settings.transmitter_email || '',
         phone: settings.transmitter_phone || ''
       },
+      employer: {
+        bn: company?.cra_business_number || settings.cra_bn_rp,
+        legal_name: company?.legal_name || company?.name,
+        address: company?.address || {}
+      },
       taxYear: tax_year,
-      slips: t4Slips
+      slips: validatedSlips
     });
 
-    // Create filing record
-    const { data: filing } = await supabase
+    // Generate file hash for audit trail
+    const hash = createHash("sha256");
+    hash.update(xml);
+    const fileHash = hash.toString();
+
+    // Create filing record with audit info
+    const { data: filing, error: filingError } = await supabase
       .from('cra_filing_records')
       .insert({
         company_id: profile.company_id,
         tax_year: tax_year,
         filing_type: 't4',
         file_format: 'xml',
-        submission_status: environment === 'production' ? 'pending' : 'test',
-        filed_by: user.id
+        submission_status: environment === 'production' ? 'generated' : 'test',
+        filed_by: user.id,
+        pack_data: {
+          file_hash: fileHash,
+          employee_count: validatedSlips.length,
+          environment: environment,
+          generated_at: new Date().toISOString()
+        }
       })
       .select()
       .single();
 
+    if (filingError) throw filingError;
+
+    // Create audit log
+    await supabase
+      .from('audit_logs')
+      .insert({
+        action: 'GENERATE_T4_XML',
+        entity_type: 'cra_filing',
+        entity_id: filing.id,
+        actor_id: user.id,
+        metadata: {
+          tax_year: tax_year,
+          environment: environment,
+          employee_count: validatedSlips.length,
+          file_hash: fileHash,
+          timestamp: new Date().toISOString()
+        }
+      });
+
     return new Response(
       JSON.stringify({
         success: true,
-        filing_id: filing?.id,
+        filing_id: filing.id,
         xml: xml,
-        employee_count: t4Slips.length,
+        file_hash: fileHash,
+        employee_count: validatedSlips.length,
         environment: environment,
-        message: `T4 XML generated for ${t4Slips.length} employees`
+        filename: `T4_${tax_year}_${environment}_${Date.now()}.xml`,
+        message: `T4 XML generated for ${validatedSlips.length} employees`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -148,17 +220,24 @@ serve(async (req) => {
 });
 
 function generateT4XML(params: any): string {
-  const { environment, transmitter, taxYear, slips } = params;
+  const { environment, transmitter, employer, taxYear, slips } = params;
   
   const isProduction = environment === 'production';
   
-  // Calculate totals
-  const totals = slips.reduce((acc: any, slip: any) => ({
-    box14: acc.box14 + (slip.box_14_employment_income || 0),
-    box16: acc.box16 + (slip.box_16_employee_cpp || 0),
-    box18: acc.box18 + (slip.box_18_employee_ei || 0),
-    box22: acc.box22 + (slip.box_22_income_tax || 0),
-  }), { box14: 0, box16: 0, box18: 0, box22: 0 });
+  // Calculate totals across all boxes
+  const totals = slips.reduce((acc: any, slip: any) => {
+    const s = slip.summary;
+    return {
+      box14: acc.box14 + (s.total_employment_income || 0),
+      box16: acc.box16 + (s.total_cpp_contributions || 0),
+      box18: acc.box18 + (s.total_ei_premiums || 0),
+      box22: acc.box22 + (s.total_income_tax || 0),
+      box24: acc.box24 + (s.total_ei_insurable || 0),
+      box26: acc.box26 + (s.total_cpp_pensionable || 0),
+      box44: acc.box44 + (s.total_union_dues || 0),
+      box46: acc.box46 + (s.total_rpp_contributions || 0),
+    };
+  }, { box14: 0, box16: 0, box18: 0, box22: 0, box24: 0, box26: 0, box44: 0, box46: 0 });
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <T4Return xmlns="http://www.cra-arc.gc.ca/xmlns/T4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -168,6 +247,16 @@ function generateT4XML(params: any): string {
     <EmailAddress>${escapeXml(transmitter.email)}</EmailAddress>
     <PhoneNumber>${escapeXml(transmitter.phone)}</PhoneNumber>
   </Transmitter>
+  <Employer>
+    <BusinessNumber>${employer.bn}</BusinessNumber>
+    <LegalName>${escapeXml(employer.legal_name)}</LegalName>
+    <Address>
+      <AddressLine1>${escapeXml(employer.address?.street || '')}</AddressLine1>
+      <City>${escapeXml(employer.address?.city || '')}</City>
+      <ProvinceCode>${employer.address?.province || 'ON'}</ProvinceCode>
+      <PostalCode>${escapeXml(employer.address?.postal_code || '')}</PostalCode>
+    </Address>
+  </Employer>
   <Return>
     <TaxYear>${taxYear}</TaxYear>
     <Environment>${isProduction ? 'Production' : 'Test'}</Environment>
@@ -177,23 +266,48 @@ function generateT4XML(params: any): string {
       <TotalBox16>${totals.box16.toFixed(2)}</TotalBox16>
       <TotalBox18>${totals.box18.toFixed(2)}</TotalBox18>
       <TotalBox22>${totals.box22.toFixed(2)}</TotalBox22>
+      <TotalBox24>${totals.box24.toFixed(2)}</TotalBox24>
+      <TotalBox26>${totals.box26.toFixed(2)}</TotalBox26>
+      <TotalBox44>${totals.box44.toFixed(2)}</TotalBox44>
+      <TotalBox46>${totals.box46.toFixed(2)}</TotalBox46>
     </Summary>
-    ${slips.map((slip: any) => `
+    ${slips.map((slip: any) => {
+      const emp = slip.employee;
+      const s = slip.summary;
+      const isUnion = emp.union_code === '72S' || emp.employee_number?.startsWith('72S');
+      
+      return `
     <T4Slip>
-      <EmployeeSIN>${slip.employees?.sin_encrypted || '000000000'}</EmployeeSIN>
-      <EmployeeFirstName>${escapeXml(slip.employees?.first_name || '')}</EmployeeFirstName>
-      <EmployeeLastName>${escapeXml(slip.employees?.last_name || '')}</EmployeeLastName>
-      <Box14>${(slip.box_14_employment_income || 0).toFixed(2)}</Box14>
-      <Box16>${(slip.box_16_employee_cpp || 0).toFixed(2)}</Box16>
-      <Box18>${(slip.box_18_employee_ei || 0).toFixed(2)}</Box18>
-      <Box22>${(slip.box_22_income_tax || 0).toFixed(2)}</Box22>
-      ${slip.box_44_union_dues ? `<Box44>${slip.box_44_union_dues.toFixed(2)}</Box44>` : ''}
-    </T4Slip>`).join('\n')}
+      <EmployeeSIN>${emp.sin_encrypted || '000000000'}</EmployeeSIN>
+      <EmployeeNumber>${escapeXml(emp.employee_number || '')}</EmployeeNumber>
+      <EmployeeFirstName>${escapeXml(emp.first_name || '')}</EmployeeFirstName>
+      <EmployeeLastName>${escapeXml(emp.last_name || '')}</EmployeeLastName>
+      <EmployeeAddress>
+        <AddressLine1>${escapeXml(emp.address?.street || '')}</AddressLine1>
+        <City>${escapeXml(emp.address?.city || '')}</City>
+        <ProvinceCode>${emp.province_code || 'ON'}</ProvinceCode>
+        <PostalCode>${escapeXml(emp.address?.postal_code || '')}</PostalCode>
+      </EmployeeAddress>
+      <Box14>${(s.total_employment_income || 0).toFixed(2)}</Box14>
+      ${s.total_cpp_contributions ? `<Box16>${s.total_cpp_contributions.toFixed(2)}</Box16>` : ''}
+      ${s.total_ei_premiums ? `<Box18>${s.total_ei_premiums.toFixed(2)}</Box18>` : ''}
+      ${s.total_income_tax ? `<Box22>${s.total_income_tax.toFixed(2)}</Box22>` : ''}
+      ${s.total_ei_insurable ? `<Box24>${s.total_ei_insurable.toFixed(2)}</Box24>` : ''}
+      ${s.total_cpp_pensionable ? `<Box26>${s.total_cpp_pensionable.toFixed(2)}</Box26>` : ''}
+      ${isUnion && s.total_union_dues ? `<Box44>${s.total_union_dues.toFixed(2)}</Box44>` : ''}
+      ${s.total_rpp_contributions ? `<Box46>${s.total_rpp_contributions.toFixed(2)}</Box46>` : ''}
+      ${s.other_income?.box40 ? `<Box40>${s.other_income.box40.toFixed(2)}</Box40>` : ''}
+      ${s.other_deductions?.box50 ? `<Box50>${s.other_deductions.box50.toFixed(2)}</Box50>` : ''}
+      ${s.other_deductions?.box52 ? `<Box52>${s.other_deductions.box52.toFixed(2)}</Box52>` : ''}
+      ${s.other_income?.box85 ? `<Box85>${s.other_income.box85.toFixed(2)}</Box85>` : ''}
+    </T4Slip>`;
+    }).join('\n')}
   </Return>
 </T4Return>`;
 }
 
 function escapeXml(unsafe: string): string {
+  if (!unsafe) return '';
   return unsafe
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

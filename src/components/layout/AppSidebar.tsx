@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus, Code } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus, Code, FileArchive } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -28,6 +28,7 @@ const menuGroups = {
   "Reports & Compliance": [
     { title: "Reports", url: "/reports", icon: BarChart3 },
     { title: "CRA Remittances", url: "/cra-remittances", icon: Receipt },
+    { title: "CRA Year Pack & Filing", url: "/admin/cra-year-pack", icon: FileArchive },
     { title: "Payroll Calculator", url: "/payroll-calculator", icon: FileSpreadsheet },
   ],
   "Administration": [
