@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHash } from "https://deno.land/std@0.190.0/hash/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -143,10 +142,12 @@ serve(async (req) => {
       slips: validatedSlips
     });
 
-    // Generate file hash for audit trail
-    const hash = createHash("sha256");
-    hash.update(xml);
-    const fileHash = hash.toString();
+    // Generate file hash for audit trail using Web Crypto API
+    const encoder = new TextEncoder();
+    const data = encoder.encode(xml);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const fileHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Create filing record with audit info
     const { data: filing, error: filingError } = await supabase
