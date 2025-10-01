@@ -3256,59 +3256,86 @@ export type Database = {
       timesheet_approvals: {
         Row: {
           approval_note: string | null
+          approval_stage: string | null
           approved_at: string
           approved_by: string
           client_ip: string | null
           created_at: string
           employee_id: string
+          final_approved_at: string | null
+          final_approved_by: string | null
           id: string
+          is_locked: boolean | null
           metadata: Json
           pay_period_end: string
           pay_period_start: string
           selected_days: Json
+          supervisor_approved_at: string | null
+          supervisor_approved_by: string | null
           total_ot_hours: number
           total_reg_hours: number
           total_sick_hours: number
           total_stat_hours: number
           total_vac_hours: number
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
           updated_at: string
         }
         Insert: {
           approval_note?: string | null
+          approval_stage?: string | null
           approved_at?: string
           approved_by: string
           client_ip?: string | null
           created_at?: string
           employee_id: string
+          final_approved_at?: string | null
+          final_approved_by?: string | null
           id?: string
+          is_locked?: boolean | null
           metadata?: Json
           pay_period_end: string
           pay_period_start: string
           selected_days?: Json
+          supervisor_approved_at?: string | null
+          supervisor_approved_by?: string | null
           total_ot_hours?: number
           total_reg_hours?: number
           total_sick_hours?: number
           total_stat_hours?: number
           total_vac_hours?: number
+          unlock_reason?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
           updated_at?: string
         }
         Update: {
           approval_note?: string | null
+          approval_stage?: string | null
           approved_at?: string
           approved_by?: string
           client_ip?: string | null
           created_at?: string
           employee_id?: string
+          final_approved_at?: string | null
+          final_approved_by?: string | null
           id?: string
+          is_locked?: boolean | null
           metadata?: Json
           pay_period_end?: string
           pay_period_start?: string
           selected_days?: Json
+          supervisor_approved_at?: string | null
+          supervisor_approved_by?: string | null
           total_ot_hours?: number
           total_reg_hours?: number
           total_sick_hours?: number
           total_stat_hours?: number
           total_vac_hours?: number
+          unlock_reason?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3665,6 +3692,26 @@ export type Database = {
         }
         Returns: string
       }
+      approve_timesheet_final: {
+        Args: {
+          p_approval_note: string
+          p_employee_id: string
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: string
+      }
+      approve_timesheet_supervisor: {
+        Args: {
+          p_approval_note: string
+          p_employee_id: string
+          p_end_date: string
+          p_selected_days: Json
+          p_start_date: string
+          p_totals: Json
+        }
+        Returns: string
+      }
       build_employee_year_end_summary: {
         Args: { p_employee_id: string; p_tax_year: number }
         Returns: string
@@ -3747,6 +3794,15 @@ export type Database = {
       require_2fa_for_admin_action: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      unlock_timesheet: {
+        Args: {
+          p_employee_id: string
+          p_end_date: string
+          p_start_date: string
+          p_unlock_reason: string
+        }
+        Returns: string
       }
     }
     Enums: {

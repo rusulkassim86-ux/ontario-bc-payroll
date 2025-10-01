@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, ChevronLeft, ChevronRight, Info, FileText } from "lucide-react";
+import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, ChevronLeft, ChevronRight, Info, FileText, Lock, Unlock, CheckCircle } from "lucide-react";
 import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
 import { PayCode } from '@/hooks/usePayCodes';
 import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
@@ -83,6 +83,14 @@ export default function IndividualTimecardMinimal() {
   // Fetch earning codes filtered by company code and timesheet availability
   const { earningCodes: timesheetPayCodes, loading: timesheetPayCodesLoading, error: payCodesError } = useTimesheetEarningCodes(companyCode);
 
+  // Check approval status and permissions
+  const [approvalStatus, setApprovalStatus] = useState<{
+    stage: string;
+    isLocked: boolean;
+    supervisorApprovedBy: string | null;
+    finalApprovedBy: string | null;
+  }>({ stage: 'pending', isLocked: false, supervisorApprovedBy: null, finalApprovedBy: null });
+
   // Calculate bi-weekly period based on company pay period settings
   const calculateBiWeeklyPeriod = (providedStart?: string, providedEnd?: string) => {
     if (providedStart && providedEnd) {
@@ -142,6 +150,30 @@ export default function IndividualTimecardMinimal() {
   const [showEndCalendar, setShowEndCalendar] = useState(false);
   const [activeTab, setActiveTab] = useState("timecard");
 
+  // Fetch approval status
+  const fetchApprovalStatus = async () => {
+    if (!employeeData?.id) return;
+    
+    const { data } = await supabase
+      .from('timesheet_approvals')
+      .select('approval_stage, is_locked, supervisor_approved_by, final_approved_by')
+      .eq('employee_id', employeeData.id)
+      .eq('pay_period_start', format(periodDates.start, 'yyyy-MM-dd'))
+      .eq('pay_period_end', format(periodDates.end, 'yyyy-MM-dd'))
+      .maybeSingle();
+    
+    if (data) {
+      setApprovalStatus({
+        stage: data.approval_stage || 'pending',
+        isLocked: data.is_locked || false,
+        supervisorApprovedBy: data.supervisor_approved_by,
+        finalApprovedBy: data.final_approved_by,
+      });
+    } else {
+      setApprovalStatus({ stage: 'pending', isLocked: false, supervisorApprovedBy: null, finalApprovedBy: null });
+    }
+  };
+
   // Validate employee ID and handle invalid IDs
   useEffect(() => {
     if (!employeeId || employeeId.trim() === "") {
@@ -172,6 +204,10 @@ export default function IndividualTimecardMinimal() {
 
     setValidatingEmployee(false);
   }, [employeeId, employeeData, employeeError, employeeLoading, navigate, toast]);
+
+  useEffect(() => {
+    fetchApprovalStatus();
+  }, [employeeData?.id, periodDates]);
 
   // Show auto-expand toast
   useEffect(() => {
@@ -473,6 +509,222 @@ export default function IndividualTimecardMinimal() {
       (totals.weeklyTotals[1].reg + totals.weeklyTotals[1].dailyOT + totals.weeklyTotals[1].weeklyOT) > 0;
     
     return week1HasHours && week2HasHours;
+  };
+
+  // Supervisor approval
+  const handleSupervisorApproval = async () => {
+    if (!employeeData?.id) return;
+    
+    const hasWeek1Hours = entries.slice(0, 7).some(e => e.hours > 0);
+    const hasWeek2Hours = entries.slice(7, 14).some(e => e.hours > 0);
+    
+    if (!hasWeek1Hours || !hasWeek2Hours) {
+      toast({
+        title: "Incomplete Timecard",
+        description: "Both weeks must have hours entered before approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedDays = entries.map(entry => ({
+      date: format(entry.date, 'yyyy-MM-dd'),
+      hours: entry.hours,
+      payCode: entry.payCode,
+      timeIn: entry.timeIn,
+      timeOut: entry.timeOut
+    }));
+
+    const totals = {
+      reg: entries
+        .filter(e => !['OT', 'OT1', 'OT2'].includes(e.payCode))
+        .reduce((sum, e) => sum + e.hours, 0),
+      ot: entries
+        .filter(e => ['OT', 'OT1', 'OT2'].includes(e.payCode))
+        .reduce((sum, e) => sum + e.hours, 0),
+      stat: 0,
+      vac: entries
+        .filter(e => e.payCode === 'VAC')
+        .reduce((sum, e) => sum + e.hours, 0),
+      sick: entries
+        .filter(e => e.payCode === 'SICK')
+        .reduce((sum, e) => sum + e.hours, 0),
+    };
+
+    try {
+      const { error } = await supabase.rpc('approve_timesheet_supervisor', {
+        p_employee_id: employeeData.id,
+        p_start_date: format(periodDates.start, 'yyyy-MM-dd'),
+        p_end_date: format(periodDates.end, 'yyyy-MM-dd'),
+        p_selected_days: selectedDays,
+        p_approval_note: `Supervisor approved for ${format(periodDates.start, 'MMM dd')} - ${format(periodDates.end, 'MMM dd, yyyy')}`,
+        p_totals: totals
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Supervisor Approved",
+        description: "Timecard approved by supervisor. Awaiting final HR/Payroll approval.",
+      });
+
+      fetchApprovalStatus();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve timecard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Final HR/Payroll approval
+  const handleFinalApproval = async () => {
+    if (!employeeData?.id) return;
+
+    try {
+      const { error } = await supabase.rpc('approve_timesheet_final', {
+        p_employee_id: employeeData.id,
+        p_start_date: format(periodDates.start, 'yyyy-MM-dd'),
+        p_end_date: format(periodDates.end, 'yyyy-MM-dd'),
+        p_approval_note: `Final approved for ${format(periodDates.start, 'MMM dd')} - ${format(periodDates.end, 'MMM dd, yyyy')}`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Final Approved",
+        description: "Timecard locked and ready for payroll processing.",
+      });
+
+      fetchApprovalStatus();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to finalize approval",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Unlock timecard (admin override)
+  const handleUnlockTimecard = async () => {
+    if (!employeeData?.id) return;
+
+    const reason = prompt("Enter reason for unlocking this timecard:");
+    if (!reason) return;
+
+    try {
+      const { error } = await supabase.rpc('unlock_timesheet', {
+        p_employee_id: employeeData.id,
+        p_start_date: format(periodDates.start, 'yyyy-MM-dd'),
+        p_end_date: format(periodDates.end, 'yyyy-MM-dd'),
+        p_unlock_reason: reason
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Timecard Unlocked",
+        description: "Timecard is now editable again.",
+      });
+
+      fetchApprovalStatus();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to unlock timecard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Determine approval button state
+  const getApprovalButton = () => {
+    if (!profile) return null;
+
+    const isManager = profile.role === 'manager';
+    const isAdmin = ['org_admin', 'payroll_admin'].includes(profile.role);
+    const hasWeek1Hours = entries.slice(0, 7).some(e => e.hours > 0);
+    const hasWeek2Hours = entries.slice(7, 14).some(e => e.hours > 0);
+    const bothWeeksComplete = hasWeek1Hours && hasWeek2Hours;
+
+    // Show status badge
+    const statusBadge = () => {
+      switch (approvalStatus.stage) {
+        case 'supervisor_approved':
+          return <Badge variant="outline" className="ml-2">Supervisor Approved - Awaiting HR</Badge>;
+        case 'final_approved':
+          return <Badge variant="default" className="ml-2 bg-green-600">Final Approved (Locked)</Badge>;
+        default:
+          return <Badge variant="secondary" className="ml-2">Pending Approval</Badge>;
+      }
+    };
+
+    return (
+      <div className="flex items-center gap-2">
+        {statusBadge()}
+        
+        {/* Supervisor Approval Button */}
+        {(isManager || isAdmin) && approvalStatus.stage === 'pending' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={handleSupervisorApproval}
+                disabled={!bothWeeksComplete || approvalStatus.isLocked}
+                variant="default"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Supervisor Approve
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {!bothWeeksComplete
+                ? "Both weeks must have hours entered"
+                : "Approve as supervisor - timecard remains editable"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Final HR/Payroll Approval Button */}
+        {isAdmin && approvalStatus.stage === 'supervisor_approved' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={handleFinalApproval}
+                variant="default"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Final Approve & Lock
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Lock timecard and mark ready for payroll
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Unlock Button (Admin Override) */}
+        {isAdmin && approvalStatus.stage === 'final_approved' && approvalStatus.isLocked && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={handleUnlockTimecard}
+                variant="destructive"
+                size="sm"
+              >
+                <Unlock className="mr-2 h-4 w-4" />
+                Unlock (Admin Override)
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Unlock this timecard for editing (creates audit log)
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    );
   };
 
   // Approve bi-weekly timecard and push to payroll register
@@ -894,15 +1146,7 @@ export default function IndividualTimecardMinimal() {
                   </Tooltip>
                 </TooltipProvider>
               )}
-              <Button 
-                size="sm" 
-                className="bg-success text-success-foreground hover:bg-success/90" 
-                onClick={handleApproveTimecard}
-                disabled={!canApproveTimecard()}
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Approve Bi-Weekly Timecard
-              </Button>
+              {getApprovalButton()}
             </div>
           </div>
         </div>
@@ -1149,6 +1393,7 @@ export default function IndividualTimecardMinimal() {
                                       value={entry.timeIn}
                                       onChange={(e) => updateEntry(entry.id, 'timeIn', e.target.value)}
                                       className="w-24"
+                                      disabled={approvalStatus.isLocked}
                                     />
                                     {punchPairs.find(p => p.date === format(entry.date, 'yyyy-MM-dd'))?.timeIn && (
                                       <TooltipProvider>
@@ -1173,6 +1418,7 @@ export default function IndividualTimecardMinimal() {
                                       value={entry.timeOut}
                                       onChange={(e) => updateEntry(entry.id, 'timeOut', e.target.value)}
                                       className="w-24"
+                                      disabled={approvalStatus.isLocked}
                                     />
                                     {punchPairs.find(p => p.date === format(entry.date, 'yyyy-MM-dd'))?.timeOut && (
                                       <TooltipProvider>
@@ -1194,6 +1440,7 @@ export default function IndividualTimecardMinimal() {
                                   <Select
                                     value={entry.payCode}
                                     onValueChange={(value) => updateEntry(entry.id, 'payCode', value)}
+                                    disabled={approvalStatus.isLocked}
                                   >
                                     <SelectTrigger className="w-32">
                                       <SelectValue placeholder="Pay Code" />
@@ -1239,12 +1486,14 @@ export default function IndividualTimecardMinimal() {
                                     step="0.01"
                                     min="0"
                                     placeholder="0.00"
+                                    disabled={approvalStatus.isLocked}
                                   />
                                 </TableCell>
                                 <TableCell>
                                   <Select
                                     value={entry.department}
                                     onValueChange={(value) => updateEntry(entry.id, 'department', value)}
+                                    disabled={approvalStatus.isLocked}
                                   >
                                     <SelectTrigger className="w-28">
                                       <SelectValue />
