@@ -36,10 +36,9 @@ export function PortalApp() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <PortalAuthProvider>
-          <BrowserRouter>
-            <Toaster />
-            <Sonner />
-            <Routes>
+          <Toaster />
+          <Sonner />
+          <Routes>
               {/* Public routes */}
               <Route path="/portal/signin" element={<SignIn />} />
               
@@ -68,13 +67,12 @@ export function PortalApp() {
                         </PortalAuthGuard>
                       } />
                       
-                      <Route path="*" element={<Navigate to="/portal" replace />} />
+              <Route path="*" element={<Navigate to="/portal" replace />} />
                     </Routes>
                   </PortalLayout>
                 </PortalAuthGuard>
               } />
             </Routes>
-          </BrowserRouter>
         </PortalAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

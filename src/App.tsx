@@ -70,57 +70,61 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AppLayout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/company" element={<Company />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/employees/:id" element={<EmployeeProfile />} />
-            <Route path="/user-management" element={<UserManagement />} />
-            <Route path="/timesheets" element={<Timesheets />} />
-            <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
-            <Route path="/timecard" element={<TimecardRedirect />} />
-            <Route path="/payroll" element={<Payroll />} />
-            <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/cra-remittances" element={<CRARemittances />} />
-            <Route path="/payroll-calculator" element={
-              <React.Suspense fallback={<div>Loading...</div>}>
-                {React.createElement(React.lazy(() => import('./pages/PayrollCalculator')))}
-              </React.Suspense>
-            } />
-            <Route path="/security-center" element={<SecurityCenter />} />
-            <Route path="/backup-restore" element={<BackupRestore />} />
-            <Route path="/device-mapping" element={<DeviceMapping />} />
-            <Route path="/punch-feed" element={<PunchFeed />} />
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/hire/new" element={<QuickHire />} />
-            <Route path="/punch-config" element={<PunchConfig />} />
-            <Route path="/payroll-inbox" element={<PayrollInbox />} />
-            <Route path="/notification-settings" element={<NotificationSettings />} />
-            <Route path="/dev/routes" element={<DevRoutes />} />
-              <Route path="/admin/codes" element={
-                <Suspense fallback={<div>Loading...</div>}>
-                  <AdminCodes />
-                </Suspense>
+            <Routes>
+              {/* Portal routes - separate from main app layout */}
+              <Route path="/portal/*" element={<PortalApp />} />
+              
+              {/* Main app routes */}
+              <Route path="/*" element={
+                <AppLayout>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/company" element={<Company />} />
+                    <Route path="/employees" element={<Employees />} />
+                    <Route path="/employees/:id" element={<EmployeeProfile />} />
+                    <Route path="/user-management" element={<UserManagement />} />
+                    <Route path="/timesheets" element={<Timesheets />} />
+                    <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
+                    <Route path="/timecard" element={<TimecardRedirect />} />
+                    <Route path="/payroll" element={<Payroll />} />
+                    <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/cra-remittances" element={<CRARemittances />} />
+                    <Route path="/payroll-calculator" element={
+                      <React.Suspense fallback={<div>Loading...</div>}>
+                        {React.createElement(React.lazy(() => import('./pages/PayrollCalculator')))}
+                      </React.Suspense>
+                    } />
+                    <Route path="/security-center" element={<SecurityCenter />} />
+                    <Route path="/backup-restore" element={<BackupRestore />} />
+                    <Route path="/device-mapping" element={<DeviceMapping />} />
+                    <Route path="/punch-feed" element={<PunchFeed />} />
+                    <Route path="/devices" element={<Devices />} />
+                    <Route path="/hire/new" element={<QuickHire />} />
+                    <Route path="/punch-config" element={<PunchConfig />} />
+                    <Route path="/payroll-inbox" element={<PayrollInbox />} />
+                    <Route path="/notification-settings" element={<NotificationSettings />} />
+                    <Route path="/dev/routes" element={<DevRoutes />} />
+                    <Route path="/admin/codes" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <AdminCodes />
+                      </Suspense>
+                    } />
+                    <Route path="/admin/cra-integration" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <CRAIntegration />
+                      </Suspense>
+                    } />
+                    <Route path="/admin/cra-year-pack" element={
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <CRAYearPack />
+                      </Suspense>
+                    } />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </AppLayout>
               } />
-              <Route path="/admin/cra-integration" element={
-                <Suspense fallback={<div>Loading...</div>}>
-                  <CRAIntegration />
-                </Suspense>
-              } />
-              <Route path="/admin/cra-year-pack" element={
-                <Suspense fallback={<div>Loading...</div>}>
-                  <CRAYearPack />
-                </Suspense>
-              } />
-            
-            {/* Portal routes */}
-            <Route path="/portal/*" element={<PortalApp />} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-            </AppLayout>
+            </Routes>
           </BrowserRouter>
         </AuthGuard>
       </AuthProvider>
