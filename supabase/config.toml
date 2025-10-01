@@ -33,3 +33,6 @@ verify_jwt = true
 
 [functions.upload-t4-mapping]
 verify_jwt = true
+
+[functions.export-gl-journal]
+verify_jwt = true

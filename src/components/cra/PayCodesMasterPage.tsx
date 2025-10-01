@@ -7,9 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, Download, FileText, Settings, CheckCircle, AlertCircle, Edit, Trash2, FileDown } from 'lucide-react';
+import { Upload, Download, FileText, Settings, CheckCircle, AlertCircle, Edit, Trash2, FileDown, FileCheck } from 'lucide-react';
 import { useCRAIntegration } from '@/hooks/useCRAIntegration';
 import { useT4Mapping } from '@/hooks/useT4Mapping';
+import { GLAccountsReference } from './GLAccountsReference';
+import { useGLExport } from '@/hooks/useGLExport';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const COMPANY_CODES = ['72R', '72S', 'OZC'];
 
@@ -51,6 +55,8 @@ export function PayCodesMasterPage() {
   } = useCRAIntegration();
   
   const { downloadMapping, uploadMapping, loadDefaults: loadDefaultMappings } = useT4Mapping();
+  const { validateGLMapping } = useGLExport();
+  const { toast } = useToast();
   
   const [selectedCompanyCode, setSelectedCompanyCode] = useState<string>('72R');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -112,6 +118,50 @@ export function PayCodesMasterPage() {
     await loadDefaultMappings(companyCode);
   };
 
+  const handleValidateGL = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      if (!profile) return;
+
+      const validation = await validateGLMapping(profile.company_id);
+      
+      if (validation.valid) {
+        toast({
+          title: 'Validation Passed',
+          description: 'All pay codes have valid GL account mappings',
+        });
+      } else {
+        const issues = [];
+        if (validation.unmappedEarnings.length > 0) {
+          issues.push(`${validation.unmappedEarnings.length} unmapped earning codes`);
+        }
+        if (validation.unmappedDeductions.length > 0) {
+          issues.push(`${validation.unmappedDeductions.length} unmapped deduction codes`);
+        }
+        if (validation.missingGL.length > 0) {
+          issues.push(`${validation.missingGL.length} codes missing GL accounts`);
+        }
+        
+        toast({
+          title: 'Validation Issues',
+          description: issues.join(', '),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to validate GL mapping',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const filteredMappings = paycodeMappings.filter(m => m.company_code === selectedCompanyCode);
 
   const getMappingTypeColor = (type: string) => {
@@ -136,14 +186,21 @@ export function PayCodesMasterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={selectedCompanyCode} onValueChange={setSelectedCompanyCode} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              {COMPANY_CODES.map(code => (
-                <TabsTrigger key={code} value={code}>
-                  Company {code}
-                </TabsTrigger>
-              ))}
+          <Tabs defaultValue="mappings" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="mappings">Pay Code Mappings</TabsTrigger>
+              <TabsTrigger value="gl">GL Accounts Reference</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="mappings" className="space-y-6">
+              <Tabs value={selectedCompanyCode} onValueChange={setSelectedCompanyCode} className="space-y-6">
+                <TabsList className="grid w-full grid-cols-3">
+                  {COMPANY_CODES.map(code => (
+                    <TabsTrigger key={code} value={code}>
+                      Company {code}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
             {COMPANY_CODES.map(companyCode => (
               <TabsContent key={companyCode} value={companyCode} className="space-y-6">
@@ -199,6 +256,15 @@ export function PayCodesMasterPage() {
                           className="flex-1"
                         >
                           Load Defaults
+                        </Button>
+                      </div>
+                      <div className="flex items-end">
+                        <Button 
+                          variant="outline" 
+                          onClick={handleValidateGL}
+                        >
+                          <FileCheck className="w-4 h-4 mr-2" />
+                          Validate GL
                         </Button>
                       </div>
                     </div>
@@ -380,7 +446,13 @@ export function PayCodesMasterPage() {
               </TabsContent>
             ))}
           </Tabs>
-        </CardContent>
+        </TabsContent>
+
+        <TabsContent value="gl" className="space-y-6">
+          <GLAccountsReference />
+        </TabsContent>
+      </Tabs>
+    </CardContent>
       </Card>
     </div>
   );
