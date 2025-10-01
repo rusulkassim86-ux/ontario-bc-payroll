@@ -62,12 +62,15 @@ export default function Timesheets() {
       return;
     }
     
-    navigate(`/timecard/${directEmployeeId.trim()}`);
+    const id = directEmployeeId.trim();
+    console.info('[Timesheets] Opening timecard for employee:', id, '-> /timecard/' + id + '/biweekly');
+    navigate(`/timecard/${id}/biweekly`, { replace: false });
     setDirectEmployeeId("");
   };
 
   const handleViewTimecard = (employeeNumber: string) => {
-    navigate(`/timecard/${employeeNumber}`);
+    console.info('[Timesheets] View Timecard clicked for:', employeeNumber, '-> /timecard/' + employeeNumber + '/biweekly');
+    navigate(`/timecard/${employeeNumber}/biweekly`, { replace: false });
   };
 
   // Calculate stats

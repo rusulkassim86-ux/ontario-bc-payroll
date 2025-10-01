@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfWeek, addDays } from "date-fns";
@@ -53,6 +53,7 @@ export default function BiWeeklyTimecard() {
   const { employeeId } = useParams<{ employeeId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
@@ -63,10 +64,18 @@ export default function BiWeeklyTimecard() {
   const [employeeQueryState, setEmployeeQueryState] = useState({ status: 'idle', error: null });
   const mounted = useRef(false);
   const queryStartTime = useRef<number>(Date.now());
+  const hasLoggedOpen = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
     queryStartTime.current = Date.now();
+    
+    // Log once on mount
+    if (!hasLoggedOpen.current) {
+      console.info('[BiWeeklyTimecard] Opened for employee:', employeeId, 'pathname:', location.pathname);
+      hasLoggedOpen.current = true;
+    }
+    
     return () => { mounted.current = false; };
   }, []);
 

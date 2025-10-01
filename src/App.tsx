@@ -85,17 +85,17 @@ const App = () => (
                 <Route path="/employees" element={<Employees />} />
                 <Route path="/employees/:id" element={<EmployeeProfile />} />
                 <Route path="/user-management" element={<UserManagement />} />
-                <Route path="/timesheets" element={<Timesheets />} />
-                <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
+            <Route path="/timesheets" element={<Timesheets />} />
             <Route 
-              path="/timesheets/:employeeId/biweekly" 
+              path="/timecard/:employeeId/biweekly" 
               element={
                 <AuthGuard>
                   <BiWeeklyTimecard />
                 </AuthGuard>
               } 
             />
-                <Route path="/timecard" element={<TimecardRedirect />} />
+            <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
+            <Route path="/timecard" element={<TimecardRedirect />} />
                 <Route path="/payroll" element={<Payroll />} />
                 <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
                 <Route path="/reports" element={<Reports />} />
