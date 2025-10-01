@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Check, Info, AlertCircle, ArrowLeft, Save, Lock, Unlock, RefreshCw } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { TimecardDiagnostics } from "@/components/debug/TimecardDiagnostics";
+import { useTimesheetPayCodes } from "@/hooks/useTimesheetPayCodes";
 
 // Timeout helper
 const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
@@ -60,7 +61,7 @@ export default function BiWeeklyTimecard() {
 
   const [timecardRows, setTimecardRows] = useState<TimecardRow[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [dataState, setDataState] = useState({ timecard: 'loading', payCodes: 'loading' });
+  const [dataState, setDataState] = useState<any>({ timecard: 'loading', payCodes: 'loading', payCodesSource: null });
   const [employeeQueryState, setEmployeeQueryState] = useState({ status: 'idle', error: null });
   const mounted = useRef(false);
   const queryStartTime = useRef<number>(Date.now());
@@ -123,36 +124,19 @@ export default function BiWeeklyTimecard() {
     retry: 1,
   });
 
-  // Fetch pay codes for dropdown (non-blocking)
-  const { data: payCodesData, status: payCodesStatus, error: payCodesError } = useQuery({
-    queryKey: ['payCodes', employeeId],
-    queryFn: async () => {
-      if (!employeeId) return { payCodes: [] };
-      
-      try {
-        const fetchPromise = supabase.functions.invoke(
-          `get-timesheet-pay-codes?employeeId=${employeeId}`
-        );
-        
-        const elapsed = Date.now() - queryStartTime.current;
-        const timeoutMs = elapsed > 1500 ? 100 : 1500 - elapsed;
-        
-        const { data, error } = await withTimeout(fetchPromise, timeoutMs);
-        
-        if (error) throw error;
-        setDataState(prev => ({ ...prev, payCodes: 'loaded' }));
-        return data;
-      } catch (err: any) {
-        console.error('[PAYCODES] Failed or timeout - entering fail-open mode', err);
-        setDataState(prev => ({ ...prev, payCodes: 'failed' }));
-        return { payCodes: [] };
-      }
-    },
-    enabled: !!employeeId && mounted.current,
-    staleTime: 300_000,
-    refetchOnWindowFocus: false,
-    retry: 0,
-  });
+  // Fetch pay codes using hook with cache + fallback
+  const companyCode = timecardData?.employee?.company_code || profile?.company_id;
+  const { payCodes: payCodesHook, loading: payCodesLoading, source: payCodesSource } = useTimesheetPayCodes(companyCode);
+  
+  useEffect(() => {
+    if (!payCodesLoading) {
+      setDataState(prev => ({ 
+        ...prev, 
+        payCodes: payCodesSource === 'fallback' ? 'fallback' : 'loaded',
+        payCodesSource 
+      }));
+    }
+  }, [payCodesLoading, payCodesSource]);
 
   // Initialize timecard rows (always render, even if empty)
   useEffect(() => {
@@ -330,7 +314,7 @@ export default function BiWeeklyTimecard() {
   // Never block UI - always render grid
   const showSkeleton = isLoading && timecardRows.length === 0;
   const hasTimeout = dataState.timecard === 'timeout';
-  const hasPayCodeIssue = dataState.payCodes === 'failed';
+  const isFallbackMode = dataState.payCodesSource === 'fallback';
 
   return (
     <ErrorBoundary>
@@ -341,9 +325,9 @@ export default function BiWeeklyTimecard() {
           userRole={profile?.role || null}
           employeeId={employeeId}
           queries={{
-            employee: { status: 'idle', error: null }, // Could add employee query if needed
+            employee: { status: 'idle', error: null },
             timecard: { status: timecardStatus, error: error },
-            payCodes: { status: payCodesStatus, error: payCodesError }
+            payCodes: { status: payCodesLoading ? 'loading' : 'success', error: null }
           }}
           dataState={dataState}
         />
@@ -421,20 +405,21 @@ export default function BiWeeklyTimecard() {
             </div>
           </CardHeader>
           <CardContent>
-            {hasPayCodeIssue && (
+            {isFallbackMode && (
               <Alert className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Pay codes unavailable (will default to REG on save).
+                <Info className="h-4 w-4" />
+                <AlertDescription className="flex items-center gap-2">
+                  <Badge variant="outline">Offline list</Badge>
+                  Using cached codes for {companyCode}. Will update on next HTTP success.
                 </AlertDescription>
               </Alert>
             )}
             
-            {!hasPayCodeIssue && (!payCodesData?.payCodes || payCodesData.payCodes.length === 0) && (
+            {!isFallbackMode && payCodesHook.length === 0 && (
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  No pay codes mapped to company {timecardData?.employee?.company_code || '---'}
+                  No pay codes mapped to company {companyCode || '---'}
                 </AlertDescription>
               </Alert>
             )}
@@ -497,9 +482,9 @@ export default function BiWeeklyTimecard() {
                             <SelectValue placeholder="Select code" />
                           </SelectTrigger>
                           <SelectContent>
-                            {payCodesData?.payCodes?.map((pc: PayCode) => (
-                              <SelectItem key={pc.id} value={pc.code}>
-                                {pc.code} - {pc.label}
+                            {payCodesHook.map((pc) => (
+                              <SelectItem key={pc.code} value={pc.code}>
+                                {pc.code} - {pc.description}
                               </SelectItem>
                             ))}
                           </SelectContent>

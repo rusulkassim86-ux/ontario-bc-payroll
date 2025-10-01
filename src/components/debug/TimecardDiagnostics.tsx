@@ -13,7 +13,7 @@ interface DiagnosticsProps {
     timecard: { status: string; error: any };
     payCodes: { status: string; error: any };
   };
-  dataState: { timecard: string; payCodes: string };
+  dataState: { timecard: string; payCodes: string; payCodesSource?: string };
 }
 
 interface NavigationLog {
@@ -156,6 +156,11 @@ export function TimecardDiagnostics({
           <div className="flex items-center gap-2">
             {getStatusIcon(queries.payCodes.status)}
             <span>PayCodes: {queries.payCodes.status}</span>
+            {dataState.payCodesSource && (
+              <Badge variant="outline" className="ml-2">
+                {dataState.payCodesSource}
+              </Badge>
+            )}
             {queries.payCodes.error && <span className="text-red-600">({queries.payCodes.error.message?.slice(0, 30)})</span>}
           </div>
         </div>
