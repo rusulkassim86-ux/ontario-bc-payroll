@@ -59,6 +59,7 @@ export default function IndividualTimecardMinimal() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const { profile } = useAuth();
   
   // Debug logging for route param verification
   console.info('[timecard] employeeId=', employeeId);
@@ -247,19 +248,23 @@ export default function IndividualTimecardMinimal() {
   );
 
   // Merge punch data with timecard entries
+  // AUTO-FILL: Calculate hours from punches and default to REG pay code
   const mergeEntriesWithPunches = (timecardEntries: TimecardEntry[]): TimecardEntry[] => {
     return timecardEntries.map(entry => {
       const dateStr = format(entry.date, 'yyyy-MM-dd');
       const punchPair = punchPairs.find(pair => pair.date === dateStr);
       
-      if (punchPair) {
+      if (punchPair && punchPair.isComplete) {
+        // Auto-calculate hours from punch In/Out times
+        const calculatedHours = calculateHours(punchPair.timeIn || '', punchPair.timeOut || '');
+        
         return {
           ...entry,
           timeIn: punchPair.timeIn || entry.timeIn,
           timeOut: punchPair.timeOut || entry.timeOut,
-          hours: punchPair.hours || entry.hours,
-          // Mark as complete if we have both in and out punches
-          approved: punchPair.isComplete ? entry.approved : false
+          hours: calculatedHours,
+          // Default to REG pay code unless already set to something else
+          payCode: entry.payCode === 'REG' ? 'REG' : entry.payCode
         };
       }
       
@@ -439,11 +444,90 @@ export default function IndividualTimecardMinimal() {
     };
   };
 
-  const handleApproveTimecard = () => {
-    toast({
-      title: "Timecard Approved",
-      description: `Timecard for ${employee.name} has been approved.`,
-    });
+  // Check if both weeks are fully entered before allowing approval
+  const canApproveTimecard = () => {
+    const totals = calculateTotalsWithOT();
+    if (!totals.is14DayPeriod) return false;
+    
+    // Check that both weeks have some hours entered
+    const week1HasHours = totals.weeklyTotals[0] && 
+      (totals.weeklyTotals[0].reg + totals.weeklyTotals[0].dailyOT + totals.weeklyTotals[0].weeklyOT) > 0;
+    const week2HasHours = totals.weeklyTotals[1] && 
+      (totals.weeklyTotals[1].reg + totals.weeklyTotals[1].dailyOT + totals.weeklyTotals[1].weeklyOT) > 0;
+    
+    return week1HasHours && week2HasHours;
+  };
+
+  // Approve bi-weekly timecard and push to payroll register
+  const handleApproveTimecard = async () => {
+    if (!employeeData?.id || !profile?.user_id) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Missing employee or user information",
+      });
+      return;
+    }
+
+    if (!canApproveTimecard()) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Approve",
+        description: "Both weeks must have hours entered before approval",
+      });
+      return;
+    }
+
+    try {
+      // Calculate totals for approval
+      const totals = calculateTotalsWithOT();
+      const periodTotals = {
+        reg: totals.periodTotals.reg,
+        ot: totals.periodTotals.dailyOT + totals.periodTotals.weeklyOT,
+        stat: totals.periodTotals.stat,
+        vac: totals.periodTotals.vac,
+        sick: totals.periodTotals.sick
+      };
+
+      // Get selected days for approval record
+      const selectedDays = entries
+        .filter(e => e.hours > 0)
+        .map(e => ({
+          date: format(e.date, 'yyyy-MM-dd'),
+          hours: e.hours,
+          payCode: e.payCode,
+          timeIn: e.timeIn,
+          timeOut: e.timeOut
+        }));
+
+      // Call the database function to approve timesheet
+      const { data, error } = await supabase.rpc('approve_timesheet', {
+        p_employee_id: employeeData.id,
+        p_start_date: format(periodDates.start, 'yyyy-MM-dd'),
+        p_end_date: format(periodDates.end, 'yyyy-MM-dd'),
+        p_selected_days: selectedDays,
+        p_approval_note: `Bi-weekly timecard approved for ${format(periodDates.start, 'MMM dd')} - ${format(periodDates.end, 'MMM dd, yyyy')}`,
+        p_totals: periodTotals
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Timecard Approved",
+        description: `Both weeks approved and ready for payroll processing`,
+      });
+
+      // Mark all entries as approved in the UI
+      setEntries(prev => prev.map(e => ({ ...e, approved: true })));
+
+    } catch (error) {
+      console.error('Error approving timecard:', error);
+      toast({
+        variant: "destructive",
+        title: "Approval Failed",
+        description: error instanceof Error ? error.message : "Failed to approve timecard",
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -762,23 +846,47 @@ export default function IndividualTimecardMinimal() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              Export PDF
-            </Button>
-            <Button variant="outline" size="sm" onClick={exportToExcel}>
-              <FileText className="h-4 w-4 mr-2" />
-              Export to Excel
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </Button>
-            <Button size="sm" className="bg-success text-success-foreground" onClick={handleApproveTimecard}>
-              <Check className="h-4 w-4 mr-2" />
-              Approve Timecard
-            </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                <Download className="h-4 w-4 mr-2" />
+                Export PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportToExcel}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export to Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Draft
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              {!canApproveTimecard() && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1 rounded">
+                        <Info className="h-3 w-3" />
+                        <span>Both weeks required</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Enter hours for both Week 1 and Week 2 before approving</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <Button 
+                size="sm" 
+                className="bg-success text-success-foreground hover:bg-success/90" 
+                onClick={handleApproveTimecard}
+                disabled={!canApproveTimecard()}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Approve Bi-Weekly Timecard
+              </Button>
+            </div>
           </div>
         </div>
       </div>
