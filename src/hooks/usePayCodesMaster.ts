@@ -9,6 +9,7 @@ export interface PayCodeMaster {
   type: 'Earnings' | 'Deduction' | 'Overtime' | 'Benefit' | 'Leave' | 'Other';
   company_scope: string;
   is_active: boolean;
+  allow_in_timesheets: boolean;
   effective_from?: string;
   effective_to?: string;
   created_at: string;
@@ -173,7 +174,8 @@ export function usePayCodesMaster() {
         type: item.payrollItem === 'Deductions' ? 'Deduction' as const : 
               deriveType(item.code, item.description),
         company_scope: item.companyScope,
-        is_active: true
+        is_active: true,
+        allow_in_timesheets: item.payrollItem !== 'Deductions' // Enable for earnings/overtime/leave
       }));
 
       // Upsert by code

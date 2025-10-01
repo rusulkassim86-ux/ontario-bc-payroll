@@ -208,6 +208,7 @@ export function PayCodesMasterPage() {
                     <TableHead>Type</TableHead>
                     <TableHead>Company Scope</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Timesheets</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -229,6 +230,11 @@ export function PayCodesMasterPage() {
                       <TableCell>
                         <Badge variant={payCode.is_active ? "default" : "secondary"}>
                           {payCode.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={payCode.allow_in_timesheets ? "default" : "outline"}>
+                          {payCode.allow_in_timesheets ? '✓ Enabled' : 'Disabled'}
                         </Badge>
                       </TableCell>
                       <TableCell>

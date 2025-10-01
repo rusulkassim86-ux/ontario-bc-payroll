@@ -8,6 +8,7 @@ export interface TimesheetPayCode {
   type: 'Earnings' | 'Overtime' | 'Leave' | 'Deduction' | 'Benefit' | 'Other';
   is_active: boolean;
   company_scope: string;
+  allow_in_timesheets: boolean;
 }
 
 /**
@@ -32,8 +33,9 @@ export function useTimesheetPayCodes(companyCode?: string) {
       // Fetch active pay codes for timesheet entry
       let query = supabase
         .from('pay_codes_master')
-        .select('code, description, type, is_active, company_scope')
+        .select('code, description, type, is_active, company_scope, allow_in_timesheets')
         .eq('is_active', true)
+        .eq('allow_in_timesheets', true)
         .in('type', ['Earnings', 'Overtime', 'Leave'])
         .order('code');
 

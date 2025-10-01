@@ -2085,6 +2085,7 @@ export type Database = {
       }
       pay_codes_master: {
         Row: {
+          allow_in_timesheets: boolean
           code: string
           company_scope: string
           created_at: string
@@ -2097,6 +2098,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_in_timesheets?: boolean
           code: string
           company_scope?: string
           created_at?: string
@@ -2109,6 +2111,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_in_timesheets?: boolean
           code?: string
           company_scope?: string
           created_at?: string

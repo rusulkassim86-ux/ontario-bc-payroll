@@ -28,6 +28,7 @@ export function PayCodeMasterForm({ payCode, onSuccess, onCancel }: PayCodeMaste
     type: payCode?.type || 'Earnings' as PayCodeMaster['type'],
     company_scope: payCode?.company_scope || 'All companies',
     is_active: payCode?.is_active ?? true,
+    allow_in_timesheets: payCode?.allow_in_timesheets ?? true,
     effective_from: payCode?.effective_from ? new Date(payCode.effective_from) : null as Date | null,
     effective_to: payCode?.effective_to ? new Date(payCode.effective_to) : null as Date | null,
   });
@@ -44,6 +45,7 @@ export function PayCodeMasterForm({ payCode, onSuccess, onCancel }: PayCodeMaste
         type: formData.type,
         company_scope: formData.company_scope.trim(),
         is_active: formData.is_active,
+        allow_in_timesheets: formData.allow_in_timesheets,
         effective_from: formData.effective_from?.toISOString().split('T')[0],
         effective_to: formData.effective_to?.toISOString().split('T')[0],
       };
@@ -182,6 +184,15 @@ export function PayCodeMasterForm({ payCode, onSuccess, onCancel }: PayCodeMaste
           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
         />
         <Label htmlFor="is_active">Active</Label>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="allow_in_timesheets"
+          checked={formData.allow_in_timesheets}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, allow_in_timesheets: checked }))}
+        />
+        <Label htmlFor="allow_in_timesheets">Allow in Timesheets</Label>
       </div>
 
       <div className="flex justify-end gap-2">
