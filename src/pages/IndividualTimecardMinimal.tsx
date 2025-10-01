@@ -17,7 +17,7 @@ import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
 import { PayCode } from '@/hooks/usePayCodes';
 import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
 import { usePayCodesMaster, PayCodeMaster } from '@/hooks/usePayCodesMaster';
-import { useCompanyPayCodes } from '@/hooks/useCompanyPayCodes';
+import { useTimesheetEarningCodes } from '@/hooks/useTimesheetEarningCodes';
 import { ManualPunchDialog } from '@/components/punch/ManualPunchDialog';
 import { usePunches } from '@/hooks/usePunches';
 import { useDeviceMapping } from '@/hooks/useDeviceMapping';
@@ -79,8 +79,8 @@ export default function IndividualTimecardMinimal() {
   // Determine company code from employee data
   const companyCode = (employeeData as any)?.company_code || (employeeData as any)?.employee_group;
   
-  // Fetch company-specific pay codes for timesheet entry using company code mapping
-  const { payCodes: timesheetPayCodes, loading: timesheetPayCodesLoading, error: payCodesError } = useCompanyPayCodes(companyCode);
+  // Fetch earning codes filtered by company code and timesheet availability
+  const { earningCodes: timesheetPayCodes, loading: timesheetPayCodesLoading, error: payCodesError } = useTimesheetEarningCodes(companyCode);
 
   // Calculate bi-weekly period based on company pay period settings
   const calculateBiWeeklyPeriod = (providedStart?: string, providedEnd?: string) => {
@@ -309,8 +309,7 @@ export default function IndividualTimecardMinimal() {
     };
   };
 
-  // Get active pay codes for dropdown filtered by company code
-  // Note: timesheetPayCodes already filtered by company via pay_code_company_map
+  // Get active earning codes for dropdown filtered by company code and timesheet availability
   const payCodeOptions = timesheetPayCodes.map(pc => pc.code);
   
   const departmentOptions = ["0000700", "0000701", "0000702", "0000703"];
@@ -469,14 +468,8 @@ export default function IndividualTimecardMinimal() {
     }
 
     try {
-      // Get pay code IDs from earning_codes table for proper foreign key reference
-      const uniquePayCodes = [...new Set(entries.map(e => e.payCode).filter(Boolean))];
-      const { data: payCodesData } = await supabase
-        .from('earning_codes')
-        .select('id, code')
-        .in('code', uniquePayCodes);
-      
-      const payCodeIdMap = new Map(payCodesData?.map(pc => [pc.code, pc.id]) || []);
+      // Create a map of pay codes to their IDs from earning_codes
+      const payCodeIdMap = new Map(timesheetPayCodes.map(ec => [ec.code, ec.id]));
 
       // Prepare timesheet data for saving
       const timesheetData = entries.map(entry => {
@@ -509,8 +502,8 @@ export default function IndividualTimecardMinimal() {
             hours_other = entry.hours;
         }
         
-        // Get pay_code_id from master table
-        const payCodeId = payCodeIdMap.get(entry.payCode);
+        // Get pay_code_id from earning_codes
+        const payCodeId = entry.payCode ? payCodeIdMap.get(entry.payCode) : null;
         
         return {
           employee_id: employeeData.id,
@@ -1080,11 +1073,11 @@ export default function IndividualTimecardMinimal() {
                                     <SelectTrigger className="w-32">
                                       <SelectValue placeholder="Pay Code" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
-                                       {timesheetPayCodesLoading ? (
+                                     <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
+                                        {timesheetPayCodesLoading ? (
                                         <SelectItem value="loading" disabled>Loading...</SelectItem>
                                       ) : payCodesError ? (
-                                        <SelectItem value="error" disabled>Error loading pay codes</SelectItem>
+                                        <SelectItem value="error" disabled>Error loading earning codes</SelectItem>
                                       ) : payCodeOptions.length === 0 ? (
                                         <SelectItem value="none" disabled>
                                           No pay codes mapped to {companyCode || 'company'}
@@ -1100,7 +1093,7 @@ export default function IndividualTimecardMinimal() {
                                                   <>
                                                     <span className="text-muted-foreground">•</span>
                                                     <span className="text-xs truncate max-w-[150px]">
-                                                      {payCodeDetails.label || payCodeDetails.description}
+                                                      {payCodeDetails.label}
                                                     </span>
                                                   </>
                                                 )}
