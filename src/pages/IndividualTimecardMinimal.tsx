@@ -17,7 +17,7 @@ import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
 import { PayCode } from '@/hooks/usePayCodes';
 import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
 import { usePayCodesMaster, PayCodeMaster } from '@/hooks/usePayCodesMaster';
-import { useTimesheetPayCodes } from '@/hooks/useTimesheetPayCodes';
+import { useCompanyPayCodes } from '@/hooks/useCompanyPayCodes';
 import { ManualPunchDialog } from '@/components/punch/ManualPunchDialog';
 import { usePunches } from '@/hooks/usePunches';
 import { useDeviceMapping } from '@/hooks/useDeviceMapping';
@@ -79,8 +79,8 @@ export default function IndividualTimecardMinimal() {
   // Determine company code from employee data
   const companyCode = (employeeData as any)?.company_code || (employeeData as any)?.employee_group;
   
-  // Fetch company-specific pay codes for timesheet entry
-  const { payCodes: timesheetPayCodes, loading: timesheetPayCodesLoading } = useTimesheetPayCodes(companyCode);
+  // Fetch company-specific pay codes for timesheet entry using company code mapping
+  const { payCodes: timesheetPayCodes, loading: timesheetPayCodesLoading, error: payCodesError } = useCompanyPayCodes(companyCode);
 
   // Calculate bi-weekly period based on company pay period settings
   const calculateBiWeeklyPeriod = (providedStart?: string, providedEnd?: string) => {
@@ -310,9 +310,8 @@ export default function IndividualTimecardMinimal() {
   };
 
   // Get active pay codes for dropdown filtered by company code
-  const payCodeOptions = timesheetPayCodes
-    .filter(pc => pc.allow_in_timesheets)
-    .map(pc => pc.code);
+  // Note: timesheetPayCodes already filtered by company via pay_code_company_map
+  const payCodeOptions = timesheetPayCodes.map(pc => pc.code);
   
   const departmentOptions = ["0000700", "0000701", "0000702", "0000703"];
 
@@ -470,10 +469,10 @@ export default function IndividualTimecardMinimal() {
     }
 
     try {
-      // Get pay code IDs from master table for proper foreign key reference
+      // Get pay code IDs from earning_codes table for proper foreign key reference
       const uniquePayCodes = [...new Set(entries.map(e => e.payCode).filter(Boolean))];
       const { data: payCodesData } = await supabase
-        .from('pay_codes_master')
+        .from('earning_codes')
         .select('id, code')
         .in('code', uniquePayCodes);
       
@@ -1082,10 +1081,14 @@ export default function IndividualTimecardMinimal() {
                                       <SelectValue placeholder="Pay Code" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
-                                      {timesheetPayCodesLoading ? (
+                                       {timesheetPayCodesLoading ? (
                                         <SelectItem value="loading" disabled>Loading...</SelectItem>
+                                      ) : payCodesError ? (
+                                        <SelectItem value="error" disabled>Error loading pay codes</SelectItem>
                                       ) : payCodeOptions.length === 0 ? (
-                                        <SelectItem value="none" disabled>No pay codes available for this company</SelectItem>
+                                        <SelectItem value="none" disabled>
+                                          No pay codes mapped to {companyCode || 'company'}
+                                        </SelectItem>
                                       ) : (
                                         payCodeOptions.map(code => {
                                           const payCodeDetails = timesheetPayCodes.find(pc => pc.code === code);
@@ -1096,7 +1099,9 @@ export default function IndividualTimecardMinimal() {
                                                 {payCodeDetails && (
                                                   <>
                                                     <span className="text-muted-foreground">•</span>
-                                                    <span className="text-xs truncate max-w-[150px]">{payCodeDetails.description}</span>
+                                                    <span className="text-xs truncate max-w-[150px]">
+                                                      {payCodeDetails.label || payCodeDetails.description}
+                                                    </span>
                                                   </>
                                                 )}
                                               </div>

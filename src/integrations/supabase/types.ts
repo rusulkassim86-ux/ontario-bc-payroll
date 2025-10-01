@@ -1052,6 +1052,8 @@ export type Database = {
       }
       earning_codes: {
         Row: {
+          active: boolean | null
+          allow_in_timesheets: boolean | null
           code: string
           company_id: string
           created_at: string
@@ -1063,10 +1065,13 @@ export type Database = {
           is_taxable_federal: boolean
           is_taxable_provincial: boolean
           is_vacation_eligible: boolean
+          label: string | null
           overtime_multiplier: number | null
           updated_at: string
         }
         Insert: {
+          active?: boolean | null
+          allow_in_timesheets?: boolean | null
           code: string
           company_id: string
           created_at?: string
@@ -1078,10 +1083,13 @@ export type Database = {
           is_taxable_federal?: boolean
           is_taxable_provincial?: boolean
           is_vacation_eligible?: boolean
+          label?: string | null
           overtime_multiplier?: number | null
           updated_at?: string
         }
         Update: {
+          active?: boolean | null
+          allow_in_timesheets?: boolean | null
           code?: string
           company_id?: string
           created_at?: string
@@ -1093,6 +1101,7 @@ export type Database = {
           is_taxable_federal?: boolean
           is_taxable_provincial?: boolean
           is_vacation_eligible?: boolean
+          label?: string | null
           overtime_multiplier?: number | null
           updated_at?: string
         }
@@ -1968,6 +1977,51 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_code_company_map: {
+        Row: {
+          company_code: string
+          created_at: string | null
+          earning_code_id: string
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+          worksite_id: string | null
+        }
+        Insert: {
+          company_code: string
+          created_at?: string | null
+          earning_code_id: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          worksite_id?: string | null
+        }
+        Update: {
+          company_code?: string
+          created_at?: string | null
+          earning_code_id?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+          worksite_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_code_company_map_earning_code_id_fkey"
+            columns: ["earning_code_id"]
+            isOneToOne: false
+            referencedRelation: "earning_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_code_company_map_worksite_id_fkey"
+            columns: ["worksite_id"]
+            isOneToOne: false
+            referencedRelation: "worksites"
             referencedColumns: ["id"]
           },
         ]
@@ -3381,7 +3435,7 @@ export type Database = {
             foreignKeyName: "timesheets_pay_code_id_fkey"
             columns: ["pay_code_id"]
             isOneToOne: false
-            referencedRelation: "pay_codes_master"
+            referencedRelation: "earning_codes"
             referencedColumns: ["id"]
           },
         ]
