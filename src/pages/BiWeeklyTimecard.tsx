@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,8 +15,18 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Check, Info, AlertCircle, ArrowLeft, Save, Lock, Unlock } from "lucide-react";
+import { Check, Info, AlertCircle, ArrowLeft, Save, Lock, Unlock, RefreshCw } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+
+// Timeout helper
+const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
+    )
+  ]);
+};
 
 interface TimecardRow {
   id: string;
@@ -48,54 +58,112 @@ export default function BiWeeklyTimecard() {
 
   const [timecardRows, setTimecardRows] = useState<TimecardRow[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [dataState, setDataState] = useState({ timecard: 'loading', payCodes: 'loading' });
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   // Calculate bi-weekly period
   const anchorDate = searchParams.get('start') || format(new Date(), 'yyyy-MM-dd');
   const periodStart = format(startOfWeek(new Date(anchorDate), { weekStartsOn: 1 }), 'yyyy-MM-dd');
   const periodEnd = format(addDays(new Date(periodStart), 13), 'yyyy-MM-dd');
 
-  // Fetch timecard data with auto-create  
+  // Fetch timecard data with auto-create and hard timeout
   const { data: timecardData, isLoading, error, refetch } = useQuery({
     queryKey: ['timecard', employeeId, periodStart, periodEnd],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke(
-        `get-biweekly-timecard?employeeId=${employeeId}&periodStart=${periodStart}&periodEnd=${periodEnd}&createIfMissing=true`
-      );
-
-      if (error) throw error;
-      return data;
+      try {
+        const fetchPromise = supabase.functions.invoke(
+          `get-biweekly-timecard?employeeId=${employeeId}&periodStart=${periodStart}&periodEnd=${periodEnd}&createIfMissing=true`
+        );
+        
+        const { data, error } = await withTimeout(fetchPromise, 800);
+        
+        if (error) throw error;
+        setDataState(prev => ({ ...prev, timecard: 'loaded' }));
+        return data;
+      } catch (err: any) {
+        if (err.message?.includes('Timeout')) {
+          setDataState(prev => ({ ...prev, timecard: 'timeout' }));
+          // Return empty timecard to render grid
+          return {
+            timecard: generateBlankRows(periodStart, periodEnd),
+            created: true,
+            employee: { id: employeeId, company_code: '---', employee_number: '---' }
+          };
+        }
+        throw err;
+      }
     },
-    enabled: !!employeeId,
+    enabled: !!employeeId && mounted.current,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: 1,
   });
 
-  // Fetch pay codes for dropdown
+  // Fetch pay codes for dropdown (non-blocking)
   const { data: payCodesData } = useQuery({
     queryKey: ['payCodes', employeeId],
     queryFn: async () => {
       if (!employeeId) return { payCodes: [] };
       
-      const { data, error } = await supabase.functions.invoke(
-        `get-timesheet-pay-codes?employeeId=${employeeId}`
-      );
-
-      if (error) throw error;
-      return data;
+      try {
+        const fetchPromise = supabase.functions.invoke(
+          `get-timesheet-pay-codes?employeeId=${employeeId}`
+        );
+        
+        const { data, error } = await withTimeout(fetchPromise, 1000);
+        
+        if (error) throw error;
+        setDataState(prev => ({ ...prev, payCodes: 'loaded' }));
+        return data;
+      } catch (err: any) {
+        setDataState(prev => ({ ...prev, payCodes: 'failed' }));
+        return { payCodes: [] };
+      }
     },
-    enabled: !!employeeId,
+    enabled: !!employeeId && mounted.current,
     staleTime: 300_000,
     refetchOnWindowFocus: false,
+    retry: 0,
   });
 
-  // Initialize timecard rows
+  // Initialize timecard rows (always render, even if empty)
   useEffect(() => {
-    if (timecardData?.timecard) {
+    if (timecardData?.timecard && Array.isArray(timecardData.timecard)) {
       setTimecardRows(timecardData.timecard);
+    } else if (!isLoading && timecardRows.length === 0) {
+      // Generate blank rows if no data
+      setTimecardRows(generateBlankRows(periodStart, periodEnd));
     }
-  }, [timecardData]);
+  }, [timecardData, isLoading]);
+
+  // Helper to generate 14 blank rows
+  function generateBlankRows(start: string, end: string): TimecardRow[] {
+    const rows: TimecardRow[] = [];
+    const startDate = new Date(start);
+    for (let i = 0; i < 14; i++) {
+      const workDate = new Date(startDate);
+      workDate.setDate(workDate.getDate() + i);
+      const dayOfWeek = workDate.getDay();
+      const weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek];
+      rows.push({
+        id: `temp-${i}`,
+        work_date: workDate.toISOString().split('T')[0],
+        weekday,
+        time_in: null,
+        time_out: null,
+        pay_code: null,
+        hours: null,
+        department: null,
+      });
+    }
+    return rows;
+  }
 
   // Save mutation
   const saveMutation = useMutation({
@@ -237,30 +305,10 @@ export default function BiWeeklyTimecard() {
   const isAdmin = profile?.role === 'org_admin' || profile?.role === 'payroll_admin';
   const canSupervise = profile?.role === 'manager' || isAdmin;
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-6 space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-96 w-full" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Failed to load timecard. {error.message}
-            <Button onClick={() => refetch()} className="ml-4" variant="outline" size="sm">
-              Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  // Never block UI - always render grid
+  const showSkeleton = isLoading && timecardRows.length === 0;
+  const hasTimeout = dataState.timecard === 'timeout';
+  const hasPayCodeIssue = dataState.payCodes === 'failed';
 
   return (
     <ErrorBoundary>
@@ -306,6 +354,19 @@ export default function BiWeeklyTimecard() {
           </Alert>
         )}
 
+        {hasTimeout && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Loading in background (timeout). Grid is editable. Save will retry.
+              <Button onClick={() => refetch()} className="ml-4" size="sm" variant="outline">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Force Reload
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -325,14 +386,30 @@ export default function BiWeeklyTimecard() {
             </div>
           </CardHeader>
           <CardContent>
-            {(!payCodesData?.payCodes || payCodesData.payCodes.length === 0) && (
+            {hasPayCodeIssue && (
               <Alert className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  No pay codes mapped to company {timecardData?.employee?.company_code}
+                  Pay codes unavailable (will default to REG on save).
                 </AlertDescription>
               </Alert>
             )}
+            
+            {!hasPayCodeIssue && (!payCodesData?.payCodes || payCodesData.payCodes.length === 0) && (
+              <Alert className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No pay codes mapped to company {timecardData?.employee?.company_code || '---'}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {showSkeleton ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-96 w-full" />
+              </div>
+            ) : (
 
             <div className="overflow-x-auto">
               <Table>
@@ -422,16 +499,28 @@ export default function BiWeeklyTimecard() {
                 </TableBody>
               </Table>
             </div>
+            )}
 
-            <div className="mt-6 flex items-center justify-between border-t pt-4">
-              <div className="flex gap-4">
-                <Button
-                  onClick={() => saveMutation.mutate()}
-                  disabled={isLocked || saveMutation.isPending}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Draft
-                </Button>
+            <div className="mt-6 space-y-4 border-t pt-4">
+              {/* Diagnostics Footer */}
+              <div className="text-xs text-muted-foreground space-y-1 p-2 bg-muted rounded">
+                <p><strong>Employee:</strong> {employeeId}</p>
+                <p><strong>Company:</strong> {timecardData?.employee?.company_code || '---'}</p>
+                <p><strong>Period:</strong> {periodStart} to {periodEnd}</p>
+                <p><strong>Rows:</strong> {timecardRows.length}</p>
+                <p><strong>Data State:</strong> timecard={dataState.timecard}, payCodes={dataState.payCodes}</p>
+                {lastSaved && <p><strong>Last Saved:</strong> {format(lastSaved, 'HH:mm:ss')}</p>}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex gap-4">
+                  <Button
+                    onClick={() => saveMutation.mutate()}
+                    disabled={isLocked || saveMutation.isPending}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Draft
+                  </Button>
 
                 {canSupervise && approvalStage === 'pending' && (
                   <Button
@@ -455,19 +544,33 @@ export default function BiWeeklyTimecard() {
                   </Button>
                 )}
 
-                {isAdmin && isLocked && (
-                  <Button
-                    onClick={() => unlockMutation.mutate()}
-                    variant="outline"
-                  >
-                    <Unlock className="mr-2 h-4 w-4" />
-                    Unlock (Admin)
-                  </Button>
-                )}
-              </div>
+                  {isAdmin && isLocked && (
+                    <Button
+                      onClick={() => unlockMutation.mutate()}
+                      variant="outline"
+                    >
+                      <Unlock className="mr-2 h-4 w-4" />
+                      Unlock (Admin)
+                    </Button>
+                  )}
 
-              <div className="text-right text-sm text-muted-foreground">
-                {lastSaved && `Last saved: ${format(lastSaved, 'HH:mm:ss')}`}
+                  <Button
+                    onClick={() => {
+                      queryClient.removeQueries({ queryKey: ['timecard', employeeId, periodStart] });
+                      refetch();
+                      toast({ title: "Reloading", description: "Fetching fresh data..." });
+                    }}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Force Reload
+                  </Button>
+                </div>
+
+                <div className="text-right text-sm text-muted-foreground">
+                  {lastSaved && `Last saved: ${format(lastSaved, 'HH:mm:ss')}`}
+                </div>
               </div>
             </div>
           </CardContent>
