@@ -16,6 +16,7 @@ import { Calendar, Download, Save, Check, ArrowLeft, Shield, CalendarIcon, Chevr
 import { PayCodeSelector } from '@/components/payroll/PayCodeSelector';
 import { PayCode } from '@/hooks/usePayCodes';
 import { PayCodeUsageReport } from '@/components/payroll/PayCodeUsageReport';
+import { usePayCodesMaster, PayCodeMaster } from '@/hooks/usePayCodesMaster';
 import { ManualPunchDialog } from '@/components/punch/ManualPunchDialog';
 import { usePunches } from '@/hooks/usePunches';
 import { useDeviceMapping } from '@/hooks/useDeviceMapping';
@@ -24,6 +25,7 @@ import { format, addDays, startOfWeek, isSameDay, parseISO, subDays, isMonday, d
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/components/auth/AuthProvider';
 import { usePayrollData } from '@/hooks/usePayrollData';
+import { supabase } from '@/integrations/supabase/client';
 import { useEmployeePayPeriod } from '@/hooks/usePayPeriods';
 import { useEmployee } from '@/hooks/useEmployee';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -69,6 +71,9 @@ export default function IndividualTimecardMinimal() {
   const [autoExpanded, setAutoExpanded] = useState(false);
   const [payCodeMap, setPayCodeMap] = useState<Record<string, PayCode>>({});
   const [validatingEmployee, setValidatingEmployee] = useState(true);
+  
+  // Fetch pay codes from master table
+  const { payCodes: masterPayCodes, loading: payCodesLoading } = usePayCodesMaster();
 
   // Calculate bi-weekly period based on company pay period settings
   const calculateBiWeeklyPeriod = (providedStart?: string, providedEnd?: string) => {
@@ -297,7 +302,11 @@ export default function IndividualTimecardMinimal() {
     };
   };
 
-  const payCodeOptions = ["REG", "OT", "STAT", "VAC", "SICK"];
+  // Get active pay codes for dropdown (filter for Earnings, Overtime, and Leave types)
+  const payCodeOptions = masterPayCodes
+    .filter(pc => pc.is_active && ['Earnings', 'Overtime', 'Leave'].includes(pc.type))
+    .map(pc => pc.code);
+  
   const departmentOptions = ["0000700", "0000701", "0000702", "0000703"];
 
   const calculateHours = (timeIn: string, timeOut: string): number => {
@@ -429,11 +438,81 @@ export default function IndividualTimecardMinimal() {
     });
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Timecard Saved",
-      description: "Your changes have been saved.",
-    });
+  const handleSave = async () => {
+    if (!employeeData?.id) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Employee ID is missing",
+      });
+      return;
+    }
+
+    // Get or create pay_calendar_id
+    let calendarId = payPeriod?.id;
+    if (!calendarId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Pay calendar not configured for this employee",
+      });
+      return;
+    }
+
+    try {
+      // Prepare timesheet data for saving
+      const timesheetData = entries.map(entry => ({
+        employee_id: employeeData.id,
+        pay_calendar_id: calendarId,
+        work_date: format(entry.date, 'yyyy-MM-dd'),
+        hours_regular: entry.payCode === 'REG' ? entry.hours : 0,
+        hours_ot1: entry.payCode === 'OT' || entry.payCode === 'OT1' ? entry.hours : 0,
+        hours_ot2: entry.payCode === 'OT2' ? entry.hours : 0,
+        hours_stat: entry.payCode === 'STAT' ? entry.hours : 0,
+        status: 'submitted',
+        pay_period_start: format(periodDates.start, 'yyyy-MM-dd'),
+        pay_period_end: format(periodDates.end, 'yyyy-MM-dd'),
+      }));
+
+      // Filter out empty entries (no hours)
+      const validEntries = timesheetData.filter(entry => 
+        entry.hours_regular > 0 || 
+        entry.hours_ot1 > 0 || 
+        entry.hours_ot2 > 0 || 
+        entry.hours_stat > 0
+      );
+
+      if (validEntries.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "No Data to Save",
+          description: "Please enter hours before saving",
+        });
+        return;
+      }
+
+      // Upsert timesheet data
+      const { error } = await supabase
+        .from('timesheets')
+        .upsert(validEntries, {
+          onConflict: 'employee_id,work_date',
+          ignoreDuplicates: false
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Timecard Saved",
+        description: `Successfully saved ${validEntries.length} timesheet entries`,
+      });
+    } catch (error) {
+      console.error('Error saving timesheet:', error);
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save timesheet",
+      });
+    }
   };
 
   const handleExportPDF = () => {
@@ -931,35 +1010,38 @@ export default function IndividualTimecardMinimal() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <div className="w-48">
-                                    <PayCodeSelector
-                                      employeeId={employeeId || ''}
-                                      value={entry.payCode}
-                                      hours={entry.hours}
-                                      date={entry.date}
-                                      showCalculation={true}
-                                      isAdmin={true} // TODO: Get from user role
-                                      onChange={(payCode) => {
-                                        if (payCode) {
-                                          setPayCodeMap(prev => ({ ...prev, [entry.id]: payCode }));
-                                          updateEntry(entry.id, 'payCode', payCode.code);
-                                        }
-                                      }}
-                                      onHoursChange={(hours) => {
-                                        updateEntry(entry.id, 'timeOut', ''); // Clear time out to recalculate
-                                        // Calculate new time out based on hours
-                                        if (entry.timeIn) {
-                                          const [inHour, inMin] = entry.timeIn.split(':').map(Number);
-                                          const inTime = inHour + inMin / 60;
-                                          const outTime = inTime + hours;
-                                          const outHour = Math.floor(outTime);
-                                          const outMin = Math.round((outTime - outHour) * 60);
-                                          const timeOut = `${outHour.toString().padStart(2, '0')}:${outMin.toString().padStart(2, '0')}`;
-                                          updateEntry(entry.id, 'timeOut', timeOut);
-                                        }
-                                      }}
-                                    />
-                                  </div>
+                                  <Select
+                                    value={entry.payCode}
+                                    onValueChange={(value) => updateEntry(entry.id, 'payCode', value)}
+                                  >
+                                    <SelectTrigger className="w-32">
+                                      <SelectValue placeholder="Pay Code" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
+                                      {payCodesLoading ? (
+                                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                                      ) : payCodeOptions.length === 0 ? (
+                                        <SelectItem value="none" disabled>No pay codes</SelectItem>
+                                      ) : (
+                                        payCodeOptions.map(code => {
+                                          const payCodeDetails = masterPayCodes.find(pc => pc.code === code);
+                                          return (
+                                            <SelectItem key={code} value={code}>
+                                              <div className="flex items-center gap-2">
+                                                <span className="font-mono">{code}</span>
+                                                {payCodeDetails && (
+                                                  <>
+                                                    <span className="text-muted-foreground">•</span>
+                                                    <span className="text-xs truncate max-w-[150px]">{payCodeDetails.description}</span>
+                                                  </>
+                                                )}
+                                              </div>
+                                            </SelectItem>
+                                          );
+                                        })
+                                      )}
+                                    </SelectContent>
+                                  </Select>
                                 </TableCell>
                                 <TableCell className="text-right font-mono">
                                   {entry.hours.toFixed(2)}
