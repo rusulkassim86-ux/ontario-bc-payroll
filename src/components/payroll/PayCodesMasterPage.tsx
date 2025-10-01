@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Settings, Upload, FileText } from 'lucide-react';
 import { usePayCodesMaster, PayCodeMaster } from '@/hooks/usePayCodesMaster';
-import { PayCodesMasterImport } from './PayCodesMasterImport';
+import { ADPImportWizard } from './ADPImportWizard';
 import { PayCodeMasterForm } from './PayCodeMasterForm';
 import {
   Dialog,
@@ -282,7 +282,7 @@ export function PayCodesMasterPage() {
         </TabsContent>
 
         <TabsContent value="import" className="space-y-6">
-          <PayCodesMasterImport />
+          <ADPImportWizard />
         </TabsContent>
       </Tabs>
     </div>

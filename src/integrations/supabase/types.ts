@@ -2209,6 +2209,72 @@ export type Database = {
           },
         ]
       }
+      paycode_to_cra_gl: {
+        Row: {
+          active: boolean
+          company_code: string
+          cra_box_code: string | null
+          created_at: string
+          gl_account: string | null
+          id: string
+          item_code: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_code: string
+          cra_box_code?: string | null
+          created_at?: string
+          gl_account?: string | null
+          id?: string
+          item_code: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_code?: string
+          cra_box_code?: string | null
+          created_at?: string
+          gl_account?: string | null
+          id?: string
+          item_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payroll_items: {
+        Row: {
+          active: boolean
+          company_code: string
+          created_at: string
+          id: string
+          item_code: string
+          item_label: string
+          item_type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          company_code: string
+          created_at?: string
+          id?: string
+          item_code: string
+          item_label: string
+          item_type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          company_code?: string
+          created_at?: string
+          id?: string
+          item_code?: string
+          item_label?: string
+          item_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_locked_until: string | null
