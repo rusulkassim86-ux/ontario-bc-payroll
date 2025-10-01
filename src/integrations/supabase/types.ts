@@ -1937,6 +1937,95 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          email_enabled: boolean | null
+          id: string
+          payroll_emails: string[] | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          slack_enabled: boolean | null
+          slack_webhook_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          payroll_emails?: string[] | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          slack_enabled?: boolean | null
+          slack_webhook_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          payroll_emails?: string[] | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          slack_enabled?: boolean | null
+          slack_webhook_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          body: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          read_at: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          body: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          read_at?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          body?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          read_at?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pay_calendars: {
         Row: {
           company_id: string
@@ -3753,6 +3842,19 @@ export type Database = {
         }
         Returns: string
       }
+      create_notification: {
+        Args: {
+          p_action_url?: string
+          p_body: string
+          p_metadata?: Json
+          p_related_entity_id?: string
+          p_related_entity_type?: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       generate_cra_remittance_report: {
         Args: {
           p_company_id: string
@@ -3778,6 +3880,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_unread_notification_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       log_payroll_access: {
         Args: { p_action: string; p_employee_id: string }
         Returns: undefined
@@ -3790,6 +3896,10 @@ export type Database = {
           sensitive_fields?: Json
         }
         Returns: string
+      }
+      mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: undefined
       }
       require_2fa_for_admin_action: {
         Args: Record<PropertyKey, never>
