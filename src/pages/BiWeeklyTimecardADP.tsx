@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Save, Check, Info } from "lucide-react";
@@ -123,6 +124,17 @@ export default function BiWeeklyTimecardADP() {
   }
 
   // Save draft mutation - persists hours to database
+  // Debounced save
+  const saveDraftDebounced = React.useMemo(() => {
+    let timeout: NodeJS.Timeout;
+    return () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        saveMutation.mutate();
+      }, 500);
+    };
+  }, []);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!employeeData) throw new Error("Employee not found");
@@ -364,7 +376,7 @@ export default function BiWeeklyTimecardADP() {
                   <TableHead>Pay Code</TableHead>
                   <TableHead>Hours</TableHead>
                   <TableHead>Department</TableHead>
-                  <TableHead>Source</TableHead>
+                  {isAdmin && <TableHead>Source</TableHead>}
                   <TableHead>Daily Total</TableHead>
                 </TableRow>
               </TableHeader>
@@ -423,21 +435,41 @@ export default function BiWeeklyTimecardADP() {
                     <TableCell>
                       <Input
                         type="number"
-                        step="0.01"
-                        value={hasManualHours ? row.manual_hours : row.hours || ''}
+                        inputMode="decimal"
+                        min={0}
+                        max={24}
+                        step={0.25}
+                        value={hasManualHours ? row.manual_hours : ''}
                         onChange={(e) => {
-                          const value = parseFloat(e.target.value) || null;
-                          updateRow(index, 'hours', value);
+                          const value = e.target.value.trim() === '' ? null : parseFloat(e.target.value);
+                          
+                          // Validate: 0-24
+                          if (value !== null && (isNaN(value) || value < 0 || value > 24)) {
+                            toast({
+                              title: "Invalid Hours",
+                              description: "Hours must be between 0 and 24",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+
                           updateRow(index, 'manual_hours', value);
-                          if (value) {
+                          updateRow(index, 'hours', value);
+                          updateRow(index, 'source', value === null ? 'punch' : 'manual');
+                          
+                          if (value !== null) {
                             // Clear punch times when entering manual hours
                             updateRow(index, 'time_in', null);
                             updateRow(index, 'time_out', null);
                           }
+                          
+                          // Auto-save
+                          saveDraftDebounced();
                         }}
                         disabled={isLocked}
                         className="w-24"
                         placeholder="0.00"
+                        title="Type hours to override punches. Clear to use machine punches."
                       />
                     </TableCell>
                     <TableCell>
@@ -450,11 +482,16 @@ export default function BiWeeklyTimecardADP() {
                         placeholder="Dept"
                       />
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={row.source === 'manual' ? 'default' : 'secondary'} className="text-xs">
-                        {row.source === 'manual' ? '✏️ Manual' : '🕐 Punch'}
-                      </Badge>
-                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <Badge 
+                          variant={row.source === 'manual' ? 'default' : 'secondary'} 
+                          className={row.source === 'manual' ? 'bg-red-100 text-red-800 text-xs' : 'bg-blue-100 text-blue-800 text-xs'}
+                        >
+                          {row.source === 'manual' ? 'Manual' : 'Punch'}
+                        </Badge>
+                      </TableCell>
+                    )}
                     <TableCell className="font-semibold">
                       {calculateTotal(row)}
                     </TableCell>
@@ -490,7 +527,7 @@ export default function BiWeeklyTimecardADP() {
                   <TableHead>Pay Code</TableHead>
                   <TableHead>Hours</TableHead>
                   <TableHead>Department</TableHead>
-                  <TableHead>Source</TableHead>
+                  {isAdmin && <TableHead>Source</TableHead>}
                   <TableHead>Daily Total</TableHead>
                 </TableRow>
               </TableHeader>
@@ -550,20 +587,41 @@ export default function BiWeeklyTimecardADP() {
                       <TableCell>
                         <Input
                           type="number"
-                          step="0.01"
-                          value={hasManualHours ? row.manual_hours : row.hours || ''}
+                          inputMode="decimal"
+                          min={0}
+                          max={24}
+                          step={0.25}
+                          value={hasManualHours ? row.manual_hours : ''}
                           onChange={(e) => {
-                            const value = parseFloat(e.target.value) || null;
-                            updateRow(actualIndex, 'hours', value);
+                            const value = e.target.value.trim() === '' ? null : parseFloat(e.target.value);
+                            
+                            // Validate: 0-24
+                            if (value !== null && (isNaN(value) || value < 0 || value > 24)) {
+                              toast({
+                                title: "Invalid Hours",
+                                description: "Hours must be between 0 and 24",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+
                             updateRow(actualIndex, 'manual_hours', value);
-                            if (value) {
+                            updateRow(actualIndex, 'hours', value);
+                            updateRow(actualIndex, 'source', value === null ? 'punch' : 'manual');
+                            
+                            if (value !== null) {
+                              // Clear punch times when entering manual hours
                               updateRow(actualIndex, 'time_in', null);
                               updateRow(actualIndex, 'time_out', null);
                             }
+                            
+                            // Auto-save
+                            saveDraftDebounced();
                           }}
                           disabled={isLocked}
                           className="w-24"
                           placeholder="0.00"
+                          title="Type hours to override punches. Clear to use machine punches."
                         />
                       </TableCell>
                       <TableCell>
@@ -576,11 +634,16 @@ export default function BiWeeklyTimecardADP() {
                           placeholder="Dept"
                         />
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={row.source === 'manual' ? 'default' : 'secondary'} className="text-xs">
-                          {row.source === 'manual' ? '✏️ Manual' : '🕐 Punch'}
-                        </Badge>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Badge 
+                            variant={row.source === 'manual' ? 'default' : 'secondary'} 
+                            className={row.source === 'manual' ? 'bg-red-100 text-red-800 text-xs' : 'bg-blue-100 text-blue-800 text-xs'}
+                          >
+                            {row.source === 'manual' ? 'Manual' : 'Punch'}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell className="font-semibold">
                         {calculateTotal(row)}
                       </TableCell>
