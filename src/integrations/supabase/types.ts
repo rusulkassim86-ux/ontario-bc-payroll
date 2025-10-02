@@ -2268,6 +2268,51 @@ export type Database = {
         }
         Relationships: []
       }
+      pay_cycles: {
+        Row: {
+          company_code: string
+          created_at: string
+          deduction_groups: string | null
+          id: string
+          pay_date: string
+          payroll_in_date: string
+          payroll_out_date: string
+          period_end_date: string
+          report_groups: string | null
+          special_effects: string | null
+          updated_at: string
+          week_number: number
+        }
+        Insert: {
+          company_code: string
+          created_at?: string
+          deduction_groups?: string | null
+          id?: string
+          pay_date: string
+          payroll_in_date: string
+          payroll_out_date: string
+          period_end_date: string
+          report_groups?: string | null
+          special_effects?: string | null
+          updated_at?: string
+          week_number: number
+        }
+        Update: {
+          company_code?: string
+          created_at?: string
+          deduction_groups?: string | null
+          id?: string
+          pay_date?: string
+          payroll_in_date?: string
+          payroll_out_date?: string
+          period_end_date?: string
+          report_groups?: string | null
+          special_effects?: string | null
+          updated_at?: string
+          week_number?: number
+        }
+        Relationships: []
+      }
       pay_run_lines: {
         Row: {
           created_at: string
