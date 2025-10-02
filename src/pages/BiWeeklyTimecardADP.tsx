@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,9 +28,121 @@ interface TimecardRow {
   hours: number | null;
   manual_hours: number | null;
   daily_hours: number | null;
-  source: 'manual' | 'punch';
+  source: 'manual' | 'punch' | 'hidden';
   department: string | null;
   approved: boolean;
+}
+
+// HoursCell component with local draft state and debounced save
+interface HoursCellProps {
+  value: number | null;
+  workDate: string;
+  payCode: string | null;
+  disabled: boolean;
+  onUpdate: (hours: number | null) => void;
+  onSave: (workDate: string, hours: number | null, payCode: string | null) => Promise<any>;
+}
+
+function HoursCell({ value, workDate, payCode, disabled, onUpdate, onSave }: HoursCellProps) {
+  const [draft, setDraft] = useState<string>(value !== null ? String(value) : '');
+  const [isValid, setIsValid] = useState(true);
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const { toast } = useToast();
+
+  // Sync with prop changes (server updates)
+  useEffect(() => {
+    setDraft(value !== null ? String(value) : '');
+  }, [value]);
+
+  const parseValue = (input: string): number | null => {
+    const trimmed = input.trim();
+    if (trimmed === '') return null;
+    
+    // Convert comma to dot for decimal
+    const normalized = trimmed.replace(',', '.');
+    const num = Number(normalized);
+    
+    if (isNaN(num)) return null;
+    
+    // Snap to quarter hours
+    return Math.round(num * 4) / 4;
+  };
+
+  const validateValue = (num: number | null): boolean => {
+    if (num === null) return true;
+    return num >= 0 && num <= 24;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDraft = e.target.value;
+    setDraft(newDraft);
+    
+    const parsed = parseValue(newDraft);
+    const valid = validateValue(parsed);
+    setIsValid(valid);
+    
+    if (valid) {
+      onUpdate(parsed);
+      
+      // Debounced save
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          await onSave(workDate, parsed, payCode);
+        } catch (error: any) {
+          toast({
+            title: "Save Failed",
+            description: error.message || "Failed to save hours",
+            variant: "destructive",
+          });
+        }
+      }, 400);
+    }
+  };
+
+  const handleBlur = async () => {
+    const parsed = parseValue(draft);
+    const valid = validateValue(parsed);
+    
+    if (!valid) {
+      // Revert to server value
+      setDraft(value !== null ? String(value) : '');
+      setIsValid(true);
+      toast({
+        title: "Invalid Hours",
+        description: "Hours must be between 0 and 24",
+        variant: "destructive",
+      });
+    } else if (parsed !== value) {
+      // Save immediately on blur if different from server
+      try {
+        await onSave(workDate, parsed, payCode);
+      } catch (error: any) {
+        toast({
+          title: "Save Failed",
+          description: error.message || "Failed to save hours",
+          variant: "destructive",
+        });
+        setDraft(value !== null ? String(value) : '');
+      }
+    }
+  };
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      value={draft}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      disabled={disabled}
+      className={`w-24 ${!isValid ? 'border-destructive' : ''}`}
+      placeholder="0.00"
+      title="Type hours to override punches. Clear to use machine punches. Accepts comma or dot as decimal."
+    />
+  );
 }
 
 export default function BiWeeklyTimecardADP() {
@@ -123,17 +235,24 @@ export default function BiWeeklyTimecardADP() {
     return rows;
   }
 
-  // Save draft mutation - persists hours to database
-  // Debounced save
-  const saveDraftDebounced = React.useMemo(() => {
-    let timeout: NodeJS.Timeout;
-    return () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        saveMutation.mutate();
-      }, 500);
+  // Save draft for a single day entry
+  const saveSingleEntry = useCallback(async (workDate: string, hours: number | null, payCode: string | null) => {
+    if (!employeeData) return;
+
+    const entry = {
+      work_date: workDate,
+      hours: hours,
+      pay_code: payCode
     };
-  }, []);
+
+    const { data, error } = await supabase.rpc('save_timecard_draft', {
+      p_employee_id: employeeData.id,
+      p_entries: [entry]
+    });
+
+    if (error) throw error;
+    return data as { success: boolean; entries_saved: number; total_hours: number; breakdown: any[] };
+  }, [employeeData]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -160,14 +279,33 @@ export default function BiWeeklyTimecardADP() {
       });
 
       if (error) throw error;
-      return data as { success: boolean; entries_saved: number; totals: { reg: number; ot: number; stat: number; vac: number; sick: number; total: number } };
+      return data as { success: boolean; entries_saved: number; total_hours: number; breakdown: any[] };
     },
     onSuccess: (data) => {
       setLastSaved(new Date());
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });
+      
+      // Update rows from server response if available
+      if (data?.breakdown && Array.isArray(data.breakdown)) {
+        const updatedRows = timecardRows.map(row => {
+          const serverDay = data.breakdown.find((d: any) => d.work_date === row.work_date);
+          if (serverDay) {
+            return {
+              ...row,
+              daily_hours: serverDay.daily_hours || 0,
+              manual_hours: serverDay.manual_hours,
+              source: serverDay.source || 'manual',
+              hours: serverDay.daily_hours || row.hours
+            };
+          }
+          return row;
+        });
+        setTimecardRows(updatedRows);
+      }
+
       toast({
         title: "Saved",
-        description: `Timecard saved: ${data?.totals?.total || 0} total hours`,
+        description: `Timecard saved: ${data?.total_hours || 0} total hours`,
       });
     },
     onError: (error: any) => {
@@ -314,6 +452,10 @@ export default function BiWeeklyTimecardADP() {
 
   const isFallbackMode = payCodesSource === 'fallback';
 
+  // Calculate total hours from all rows
+  const totalHours = timecardRows.reduce((sum, row) => sum + (row.daily_hours || row.hours || 0), 0);
+  const canApprove = totalHours > 0;
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <PageHeader
@@ -433,43 +575,23 @@ export default function BiWeeklyTimecardADP() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        max={24}
-                        step={0.25}
-                        value={hasManualHours ? row.manual_hours : ''}
-                        onChange={(e) => {
-                          const value = e.target.value.trim() === '' ? null : parseFloat(e.target.value);
+                      <HoursCell
+                        value={row.manual_hours}
+                        workDate={row.work_date}
+                        payCode={row.pay_code}
+                        disabled={isLocked}
+                        onUpdate={(hours) => {
+                          updateRow(index, 'manual_hours', hours);
+                          updateRow(index, 'hours', hours);
+                          updateRow(index, 'source', hours === null ? 'punch' : 'manual');
                           
-                          // Validate: 0-24
-                          if (value !== null && (isNaN(value) || value < 0 || value > 24)) {
-                            toast({
-                              title: "Invalid Hours",
-                              description: "Hours must be between 0 and 24",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
-
-                          updateRow(index, 'manual_hours', value);
-                          updateRow(index, 'hours', value);
-                          updateRow(index, 'source', value === null ? 'punch' : 'manual');
-                          
-                          if (value !== null) {
+                          if (hours !== null) {
                             // Clear punch times when entering manual hours
                             updateRow(index, 'time_in', null);
                             updateRow(index, 'time_out', null);
                           }
-                          
-                          // Auto-save
-                          saveDraftDebounced();
                         }}
-                        disabled={isLocked}
-                        className="w-24"
-                        placeholder="0.00"
-                        title="Type hours to override punches. Clear to use machine punches."
+                        onSave={saveSingleEntry}
                       />
                     </TableCell>
                     <TableCell>
@@ -482,13 +604,15 @@ export default function BiWeeklyTimecardADP() {
                         placeholder="Dept"
                       />
                     </TableCell>
-                    {isAdmin && (
+                    {isAdmin && row.source !== 'hidden' && (
                       <TableCell>
                         <Badge 
-                          variant={row.source === 'manual' ? 'default' : 'secondary'} 
-                          className={row.source === 'manual' ? 'bg-red-100 text-red-800 text-xs' : 'bg-blue-100 text-blue-800 text-xs'}
+                          variant={row.source === 'manual' ? 'default' : 'secondary'}
+                          className={row.source === 'manual' 
+                            ? 'bg-[hsl(var(--badge-manual-bg))] text-[hsl(var(--badge-manual-fg))] text-xs px-2 py-1 rounded-full' 
+                            : 'bg-[hsl(var(--badge-punch-bg))] text-[hsl(var(--badge-punch-fg))] text-xs px-2 py-1 rounded-full'}
                         >
-                          {row.source === 'manual' ? 'Manual' : 'Punch'}
+                          {row.source === 'manual' ? 'Manual' : 'Machine'}
                         </Badge>
                       </TableCell>
                     )}
@@ -585,44 +709,24 @@ export default function BiWeeklyTimecardADP() {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          min={0}
-                          max={24}
-                          step={0.25}
-                          value={hasManualHours ? row.manual_hours : ''}
-                          onChange={(e) => {
-                            const value = e.target.value.trim() === '' ? null : parseFloat(e.target.value);
-                            
-                            // Validate: 0-24
-                            if (value !== null && (isNaN(value) || value < 0 || value > 24)) {
-                              toast({
-                                title: "Invalid Hours",
-                                description: "Hours must be between 0 and 24",
-                                variant: "destructive",
-                              });
-                              return;
-                            }
-
-                            updateRow(actualIndex, 'manual_hours', value);
-                            updateRow(actualIndex, 'hours', value);
-                            updateRow(actualIndex, 'source', value === null ? 'punch' : 'manual');
-                            
-                            if (value !== null) {
-                              // Clear punch times when entering manual hours
-                              updateRow(actualIndex, 'time_in', null);
-                              updateRow(actualIndex, 'time_out', null);
-                            }
-                            
-                            // Auto-save
-                            saveDraftDebounced();
-                          }}
-                          disabled={isLocked}
-                          className="w-24"
-                          placeholder="0.00"
-                          title="Type hours to override punches. Clear to use machine punches."
-                        />
+                      <HoursCell
+                        value={row.manual_hours}
+                        workDate={row.work_date}
+                        payCode={row.pay_code}
+                        disabled={isLocked}
+                        onUpdate={(hours) => {
+                          updateRow(actualIndex, 'manual_hours', hours);
+                          updateRow(actualIndex, 'hours', hours);
+                          updateRow(actualIndex, 'source', hours === null ? 'punch' : 'manual');
+                          
+                          if (hours !== null) {
+                            // Clear punch times when entering manual hours
+                            updateRow(actualIndex, 'time_in', null);
+                            updateRow(actualIndex, 'time_out', null);
+                          }
+                        }}
+                        onSave={saveSingleEntry}
+                      />
                       </TableCell>
                       <TableCell>
                         <Input
@@ -634,13 +738,15 @@ export default function BiWeeklyTimecardADP() {
                           placeholder="Dept"
                         />
                       </TableCell>
-                      {isAdmin && (
+                      {isAdmin && row.source !== 'hidden' && (
                         <TableCell>
                           <Badge 
-                            variant={row.source === 'manual' ? 'default' : 'secondary'} 
-                            className={row.source === 'manual' ? 'bg-red-100 text-red-800 text-xs' : 'bg-blue-100 text-blue-800 text-xs'}
+                            variant={row.source === 'manual' ? 'default' : 'secondary'}
+                            className={row.source === 'manual' 
+                              ? 'bg-[hsl(var(--badge-manual-bg))] text-[hsl(var(--badge-manual-fg))] text-xs px-2 py-1 rounded-full' 
+                              : 'bg-[hsl(var(--badge-punch-bg))] text-[hsl(var(--badge-punch-fg))] text-xs px-2 py-1 rounded-full'}
                           >
-                            {row.source === 'manual' ? 'Manual' : 'Punch'}
+                            {row.source === 'manual' ? 'Manual' : 'Machine'}
                           </Badge>
                         </TableCell>
                       )}
@@ -671,8 +777,9 @@ export default function BiWeeklyTimecardADP() {
               {canSupervise && status === 'pending' && (
                 <Button
                   onClick={() => supervisorApproveMutation.mutate()}
-                  disabled={supervisorApproveMutation.isPending || isLocked}
+                  disabled={supervisorApproveMutation.isPending || isLocked || !canApprove}
                   variant="secondary"
+                  title={!canApprove ? "Cannot approve timecard with zero hours" : ""}
                 >
                   <Check className="mr-2 h-4 w-4" />
                   {supervisorApproveMutation.isPending ? 'Approving...' : 'Supervisor Approve'}
@@ -682,8 +789,9 @@ export default function BiWeeklyTimecardADP() {
               {isAdmin && status === 'supervisor_approved' && (
                 <Button
                   onClick={() => hrApproveMutation.mutate()}
-                  disabled={hrApproveMutation.isPending || isLocked}
+                  disabled={hrApproveMutation.isPending || isLocked || !canApprove}
                   variant="default"
+                  title={!canApprove ? "Cannot approve timecard with zero hours" : ""}
                 >
                   <Check className="mr-2 h-4 w-4" />
                   {hrApproveMutation.isPending ? 'Finalizing...' : 'HR Final Approve'}
@@ -692,6 +800,9 @@ export default function BiWeeklyTimecardADP() {
             </div>
 
             <div className="flex items-center gap-4">
+              <div className="text-lg font-semibold">
+                Total: {totalHours.toFixed(2)} hours
+              </div>
               <Badge variant={status === 'final_approved' ? 'default' : 'secondary'}>
                 {status === 'supervisor_approved' ? 'Approved (Supervisor)' :
                  status === 'final_approved' ? 'Final Approved' : 'Pending'}

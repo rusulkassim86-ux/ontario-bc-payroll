@@ -75,6 +75,12 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Timecard Source Badges */
+    --badge-manual-bg: 0 100% 95%;
+    --badge-manual-fg: 0 100% 35%;
+    --badge-punch-bg: 202 100% 95%;
+    --badge-punch-fg: 202 100% 30%;
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
