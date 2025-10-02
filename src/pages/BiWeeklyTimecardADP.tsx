@@ -139,35 +139,87 @@ export default function BiWeeklyTimecardADP() {
     },
   });
 
-  // Supervisor approval (local only for now)
+  // Supervisor approval
   const supervisorApproveMutation = useMutation({
     mutationFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { success: true };
+      if (!employeeData) throw new Error("Employee not found");
+      
+      const totals = {
+        reg: timecardRows.filter(r => r.pay_code === 'REG').reduce((sum, r) => sum + (r.hours || 0), 0),
+        ot: timecardRows.filter(r => r.pay_code?.includes('OT') || r.pay_code === 'O/T').reduce((sum, r) => sum + (r.hours || 0), 0),
+        stat: timecardRows.filter(r => r.pay_code === 'STAT').reduce((sum, r) => sum + (r.hours || 0), 0),
+        vac: timecardRows.filter(r => r.pay_code === 'VAC').reduce((sum, r) => sum + (r.hours || 0), 0),
+        sick: timecardRows.filter(r => r.pay_code === 'SICK').reduce((sum, r) => sum + (r.hours || 0), 0)
+      };
+
+      const week1Start = new Date(periodStart);
+      const week2End = new Date(periodEnd);
+
+      const { data, error } = await supabase.rpc('approve_timesheet_supervisor', {
+        p_employee_id: employeeData.id,
+        p_start_date: week1Start.toISOString().split('T')[0],
+        p_end_date: week2End.toISOString().split('T')[0],
+        p_selected_days: timecardRows.filter(r => r.hours && r.hours > 0).map(r => r.work_date),
+        p_approval_note: 'Supervisor approved via ADP timecard',
+        p_totals: totals
+      });
+
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       setStatus('supervisor_approved');
+      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
+      queryClient.invalidateQueries({ queryKey: ['timesheet-approvals'] });
       toast({
         title: "Supervisor Approved",
-        description: "Timecard approved by supervisor (local)",
+        description: "Timecard approved by supervisor. Ready for HR review.",
       });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Approval Failed",
+        description: error.message || "Failed to approve timecard",
+        variant: "destructive",
+      });
+    }
   });
 
-  // HR final approval (local only for now)
+  // HR final approval
   const hrApproveMutation = useMutation({
     mutationFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { success: true };
+      if (!employeeData) throw new Error("Employee not found");
+      
+      const week1Start = new Date(periodStart);
+      const week2End = new Date(periodEnd);
+      
+      const { data, error } = await supabase.rpc('approve_timesheet_final', {
+        p_employee_id: employeeData.id,
+        p_start_date: week1Start.toISOString().split('T')[0],
+        p_end_date: week2End.toISOString().split('T')[0],
+        p_approval_note: 'HR/Payroll final approval via ADP timecard'
+      });
+
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       setStatus('final_approved');
       setIsLocked(true);
+      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
+      queryClient.invalidateQueries({ queryKey: ['timesheet-approvals'] });
       toast({
         title: "Final Approved",
-        description: "Timecard finalized and locked. Ready for payroll. (local)",
+        description: "Timecard finalized and locked. Ready for payroll.",
       });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Approval Failed",
+        description: error.message || "Failed to finalize timecard",
+        variant: "destructive",
+      });
+    }
   });
 
   const updateRow = (index: number, field: keyof TimecardRow, value: any) => {
