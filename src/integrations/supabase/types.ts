@@ -834,6 +834,9 @@ export type Database = {
           company_id: string
           created_at: string
           description: string
+          gl_account: string | null
+          gl_debit_credit: string | null
+          gl_department: string | null
           id: string
           is_cpp_reduction: boolean
           is_ei_reduction: boolean
@@ -853,6 +856,9 @@ export type Database = {
           company_id: string
           created_at?: string
           description: string
+          gl_account?: string | null
+          gl_debit_credit?: string | null
+          gl_department?: string | null
           id?: string
           is_cpp_reduction?: boolean
           is_ei_reduction?: boolean
@@ -872,6 +878,9 @@ export type Database = {
           company_id?: string
           created_at?: string
           description?: string
+          gl_account?: string | null
+          gl_debit_credit?: string | null
+          gl_department?: string | null
           id?: string
           is_cpp_reduction?: boolean
           is_ei_reduction?: boolean
@@ -1058,6 +1067,9 @@ export type Database = {
           company_id: string
           created_at: string
           description: string
+          gl_account: string | null
+          gl_debit_credit: string | null
+          gl_department: string | null
           id: string
           is_cpp_pensionable: boolean
           is_ei_insurable: boolean
@@ -1076,6 +1088,9 @@ export type Database = {
           company_id: string
           created_at?: string
           description: string
+          gl_account?: string | null
+          gl_debit_credit?: string | null
+          gl_department?: string | null
           id?: string
           is_cpp_pensionable?: boolean
           is_ei_insurable?: boolean
@@ -1094,6 +1109,9 @@ export type Database = {
           company_id?: string
           created_at?: string
           description?: string
+          gl_account?: string | null
+          gl_debit_credit?: string | null
+          gl_department?: string | null
           id?: string
           is_cpp_pensionable?: boolean
           is_ei_insurable?: boolean
@@ -1829,6 +1847,50 @@ export type Database = {
             columns: ["vacation_policy_id"]
             isOneToOne: false
             referencedRelation: "vacation_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gl_accounts: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_type: string
+          company_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          normal_balance: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_type: string
+          company_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          normal_balance: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_type?: string
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          normal_balance?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gl_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
