@@ -3443,6 +3443,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          daily_hours: number
           department: string | null
           employee_id: string
           hours_ot1: number
@@ -3454,6 +3455,7 @@ export type Database = {
           hours_vac: number
           id: string
           locked_at: string | null
+          manual_hours: number | null
           notes: string | null
           pay_calendar_id: string
           pay_code: string | null
@@ -3461,6 +3463,7 @@ export type Database = {
           pay_period_end: string | null
           pay_period_start: string | null
           project_code: string | null
+          source: string
           status: string
           time_in: string | null
           time_out: string | null
@@ -3472,6 +3475,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          daily_hours?: number
           department?: string | null
           employee_id: string
           hours_ot1?: number
@@ -3483,6 +3487,7 @@ export type Database = {
           hours_vac?: number
           id?: string
           locked_at?: string | null
+          manual_hours?: number | null
           notes?: string | null
           pay_calendar_id: string
           pay_code?: string | null
@@ -3490,6 +3495,7 @@ export type Database = {
           pay_period_end?: string | null
           pay_period_start?: string | null
           project_code?: string | null
+          source?: string
           status?: string
           time_in?: string | null
           time_out?: string | null
@@ -3501,6 +3507,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          daily_hours?: number
           department?: string | null
           employee_id?: string
           hours_ot1?: number
@@ -3512,6 +3519,7 @@ export type Database = {
           hours_vac?: number
           id?: string
           locked_at?: string | null
+          manual_hours?: number | null
           notes?: string | null
           pay_calendar_id?: string
           pay_code?: string | null
@@ -3519,6 +3527,7 @@ export type Database = {
           pay_period_end?: string | null
           pay_period_start?: string | null
           project_code?: string | null
+          source?: string
           status?: string
           time_in?: string | null
           time_out?: string | null
@@ -3767,7 +3776,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_punch_hours: {
+        Row: {
+          employee_id: string | null
+          punch_hours: number | null
+          work_date: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "punches_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_timesheet: {

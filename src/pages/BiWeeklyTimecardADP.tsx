@@ -25,6 +25,9 @@ interface TimecardRow {
   time_out: string | null;
   pay_code: string | null;
   hours: number | null;
+  manual_hours: number | null;
+  daily_hours: number | null;
+  source: 'manual' | 'punch';
   department: string | null;
   approved: boolean;
 }
@@ -109,6 +112,9 @@ export default function BiWeeklyTimecardADP() {
         time_out: null,
         pay_code: null,
         hours: null,
+        manual_hours: null,
+        daily_hours: null,
+        source: 'manual',
         department: employeeData?.home_department || null,
         approved: false,
       });
@@ -358,11 +364,14 @@ export default function BiWeeklyTimecardADP() {
                   <TableHead>Pay Code</TableHead>
                   <TableHead>Hours</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Daily Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {week1Rows.map((row, index) => (
+                {week1Rows.map((row, index) => {
+                  const hasManualHours = row.manual_hours !== null && row.manual_hours !== undefined;
+                  return (
                   <TableRow key={row.id}>
                     <TableCell>
                       <Checkbox
@@ -378,8 +387,9 @@ export default function BiWeeklyTimecardADP() {
                         type="time"
                         value={row.time_in || ''}
                         onChange={(e) => updateRow(index, 'time_in', e.target.value)}
-                        disabled={isLocked}
+                        disabled={isLocked || hasManualHours}
                         className="w-32"
+                        placeholder={hasManualHours ? "Manual" : ""}
                       />
                     </TableCell>
                     <TableCell>
@@ -387,8 +397,9 @@ export default function BiWeeklyTimecardADP() {
                         type="time"
                         value={row.time_out || ''}
                         onChange={(e) => updateRow(index, 'time_out', e.target.value)}
-                        disabled={isLocked}
+                        disabled={isLocked || hasManualHours}
                         className="w-32"
+                        placeholder={hasManualHours ? "Manual" : ""}
                       />
                     </TableCell>
                     <TableCell>
@@ -413,8 +424,17 @@ export default function BiWeeklyTimecardADP() {
                       <Input
                         type="number"
                         step="0.01"
-                        value={row.hours || ''}
-                        onChange={(e) => updateRow(index, 'hours', parseFloat(e.target.value) || null)}
+                        value={hasManualHours ? row.manual_hours : row.hours || ''}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || null;
+                          updateRow(index, 'hours', value);
+                          updateRow(index, 'manual_hours', value);
+                          if (value) {
+                            // Clear punch times when entering manual hours
+                            updateRow(index, 'time_in', null);
+                            updateRow(index, 'time_out', null);
+                          }
+                        }}
                         disabled={isLocked}
                         className="w-24"
                         placeholder="0.00"
@@ -430,11 +450,17 @@ export default function BiWeeklyTimecardADP() {
                         placeholder="Dept"
                       />
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={row.source === 'manual' ? 'default' : 'secondary'} className="text-xs">
+                        {row.source === 'manual' ? '✏️ Manual' : '🕐 Punch'}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="font-semibold">
                       {calculateTotal(row)}
                     </TableCell>
                   </TableRow>
-                ))}
+                );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -464,12 +490,14 @@ export default function BiWeeklyTimecardADP() {
                   <TableHead>Pay Code</TableHead>
                   <TableHead>Hours</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Daily Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {week2Rows.map((row, index) => {
                   const actualIndex = index + 7;
+                  const hasManualHours = row.manual_hours !== null && row.manual_hours !== undefined;
                   return (
                     <TableRow key={row.id}>
                       <TableCell>
@@ -486,8 +514,9 @@ export default function BiWeeklyTimecardADP() {
                           type="time"
                           value={row.time_in || ''}
                           onChange={(e) => updateRow(actualIndex, 'time_in', e.target.value)}
-                          disabled={isLocked}
+                          disabled={isLocked || hasManualHours}
                           className="w-32"
+                          placeholder={hasManualHours ? "Manual" : ""}
                         />
                       </TableCell>
                       <TableCell>
@@ -495,8 +524,9 @@ export default function BiWeeklyTimecardADP() {
                           type="time"
                           value={row.time_out || ''}
                           onChange={(e) => updateRow(actualIndex, 'time_out', e.target.value)}
-                          disabled={isLocked}
+                          disabled={isLocked || hasManualHours}
                           className="w-32"
+                          placeholder={hasManualHours ? "Manual" : ""}
                         />
                       </TableCell>
                       <TableCell>
@@ -521,8 +551,16 @@ export default function BiWeeklyTimecardADP() {
                         <Input
                           type="number"
                           step="0.01"
-                          value={row.hours || ''}
-                          onChange={(e) => updateRow(actualIndex, 'hours', parseFloat(e.target.value) || null)}
+                          value={hasManualHours ? row.manual_hours : row.hours || ''}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value) || null;
+                            updateRow(actualIndex, 'hours', value);
+                            updateRow(actualIndex, 'manual_hours', value);
+                            if (value) {
+                              updateRow(actualIndex, 'time_in', null);
+                              updateRow(actualIndex, 'time_out', null);
+                            }
+                          }}
                           disabled={isLocked}
                           className="w-24"
                           placeholder="0.00"
@@ -537,6 +575,11 @@ export default function BiWeeklyTimecardADP() {
                           className="w-32"
                           placeholder="Dept"
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={row.source === 'manual' ? 'default' : 'secondary'} className="text-xs">
+                          {row.source === 'manual' ? '✏️ Manual' : '🕐 Punch'}
+                        </Badge>
                       </TableCell>
                       <TableCell className="font-semibold">
                         {calculateTotal(row)}
