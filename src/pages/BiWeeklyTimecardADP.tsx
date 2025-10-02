@@ -199,9 +199,9 @@ export default function BiWeeklyTimecardADP() {
         p_employee_id: employeeData.id,
         p_start_date: week1Start.toISOString().split('T')[0],
         p_end_date: week2End.toISOString().split('T')[0],
-        p_selected_days: timecardRows.filter(r => r.hours && r.hours > 0).map(r => ({ date: r.work_date })),
+        p_selected_days: timecardRows.filter(r => r.hours && r.hours > 0).map(r => r.work_date),
         p_approval_note: 'Supervisor approved via ADP timecard',
-        p_totals: savedTotals.totals // Pass saved totals (will be recalculated server-side)
+        p_totals: {} // Will be recalculated from DB server-side
       });
 
       if (error) throw error;
