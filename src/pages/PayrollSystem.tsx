@@ -12,64 +12,68 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle, AlertCircle, Calendar, Users, DollarSign, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
 
 export default function PayrollSystem() {
   const { profile } = useAuth();
-
-  const { data: stats } = useQuery({
-    queryKey: ['payroll-stats', profile?.company_id],
-    queryFn: async () => {
-      if (!profile?.company_id) {
-        return {
-          payCycles: 0,
-          employees: 0,
-          earningCodes: 0,
-          deductionCodes: 0,
-          glAccounts: 0,
-        };
-      }
-
-      const payCyclesQuery = await supabase.from('pay_cycles').select('*', { count: 'exact', head: true }).eq('company_id', profile.company_id);
-      const employeesQuery = await supabase.from('employees').select('*', { count: 'exact', head: true }).eq('company_id', profile.company_id);
-      const earningCodesQuery = await supabase.from('earning_codes').select('*', { count: 'exact', head: true }).eq('company_id', profile.company_id);
-      const deductionCodesQuery = await supabase.from('deduction_codes').select('*', { count: 'exact', head: true }).eq('company_id', profile.company_id);
-      const glAccountsQuery = await supabase.from('gl_accounts').select('*', { count: 'exact', head: true }).eq('company_id', profile.company_id);
-
-      return {
-        payCycles: payCyclesQuery.count || 0,
-        employees: employeesQuery.count || 0,
-        earningCodes: earningCodesQuery.count || 0,
-        deductionCodes: deductionCodesQuery.count || 0,
-        glAccounts: glAccountsQuery.count || 0,
-      };
-    },
-    enabled: !!profile?.company_id,
+  const [stats, setStats] = useState({
+    payCycles: 0,
+    employees: 0,
+    earningCodes: 0,
+    deductionCodes: 0,
+    glAccounts: 0,
   });
+
+  useEffect(() => {
+    if (!profile?.company_id) return;
+
+    const fetchStats = async () => {
+      try {
+        const r1: any = await supabase.from('pay_cycles').select('id', { count: 'exact', head: true });
+        const r2: any = await supabase.from('employees').select('id', { count: 'exact', head: true });
+        const r3: any = await supabase.from('earning_codes').select('id', { count: 'exact', head: true });
+        const r4: any = await supabase.from('deduction_codes').select('id', { count: 'exact', head: true });
+        const r5: any = await supabase.from('gl_accounts').select('id', { count: 'exact', head: true });
+
+        setStats({
+          payCycles: r1.count || 0,
+          employees: r2.count || 0,
+          earningCodes: r3.count || 0,
+          deductionCodes: r4.count || 0,
+          glAccounts: r5.count || 0,
+        });
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      }
+    };
+
+    fetchStats();
+  }, [profile?.company_id]);
 
   const setupSteps = [
     {
       title: 'Pay Cycles Loaded',
-      count: stats?.payCycles || 0,
+      count: stats.payCycles,
       icon: Calendar,
-      status: (stats?.payCycles || 0) > 0 ? 'complete' : 'pending',
+      status: stats.payCycles > 0 ? 'complete' : 'pending',
     },
     {
       title: 'Employees Assigned',
-      count: stats?.employees || 0,
+      count: stats.employees,
       icon: Users,
-      status: (stats?.employees || 0) > 0 ? 'complete' : 'pending',
+      status: stats.employees > 0 ? 'complete' : 'pending',
     },
     {
       title: 'Pay Codes Configured',
-      count: (stats?.earningCodes || 0) + (stats?.deductionCodes || 0),
+      count: stats.earningCodes + stats.deductionCodes,
       icon: DollarSign,
-      status: ((stats?.earningCodes || 0) + (stats?.deductionCodes || 0)) > 0 ? 'complete' : 'pending',
+      status: (stats.earningCodes + stats.deductionCodes) > 0 ? 'complete' : 'pending',
     },
     {
       title: 'GL Accounts Mapped',
-      count: stats?.glAccounts || 0,
+      count: stats.glAccounts,
       icon: FileText,
-      status: (stats?.glAccounts || 0) > 0 ? 'complete' : 'pending',
+      status: stats.glAccounts > 0 ? 'complete' : 'pending',
     },
   ];
 

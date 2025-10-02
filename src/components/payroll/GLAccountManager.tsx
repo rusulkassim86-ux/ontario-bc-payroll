@@ -46,9 +46,9 @@ export function GLAccountManager() {
     normal_balance: 'debit' as const,
   });
 
-  const { data: glAccounts, isLoading } = useQuery({
+  const { data: glAccounts, isLoading } = useQuery<GLAccount[]>({
     queryKey: ['gl-accounts', profile?.company_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<GLAccount[]> => {
       if (!profile?.company_id) return [];
       const { data, error } = await supabase
         .from('gl_accounts')
@@ -57,7 +57,7 @@ export function GLAccountManager() {
         .order('account_code');
       
       if (error) throw error;
-      return data as GLAccount[];
+      return (data || []) as GLAccount[];
     },
     enabled: !!profile?.company_id,
   });
