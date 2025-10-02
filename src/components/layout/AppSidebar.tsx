@@ -1,4 +1,4 @@
-import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus, Code, FileArchive, FileCheck, Calendar } from "lucide-react";
+import { Building2, Users, Clock, Calculator, FileText, Settings, BarChart3, Home, Shield, Database, Smartphone, Activity, Receipt, UserCog, Monitor, Zap, HardDrive, List, FileSpreadsheet, UserPlus, Code, FileArchive, FileCheck, Calendar, DollarSign } from "lucide-react";
 import { 
   Sidebar,
   SidebarContent,
@@ -25,6 +25,7 @@ const getMenuGroups = () => {
       { title: "Timesheets", url: "/timesheets", icon: Clock },
     ],
     "Payroll Processing": [
+      { title: "Payroll Dashboard", url: "/payroll-dashboard", icon: DollarSign },
       { title: "Payroll", url: "/payroll", icon: Calculator },
       { title: "Pay Calendar", url: "/pay-calendar", icon: Calendar },
       ...(APP_FEATURES.timesheetsNotifications ? [{ title: "Payroll Inbox", url: "/payroll-inbox", icon: FileCheck }] : []),

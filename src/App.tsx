@@ -10,6 +10,7 @@ import { AuthProvider } from "./components/auth/AuthProvider";
 import { AuthGuard } from "./components/auth/AuthGuard";
 import Dashboard from "./pages/Dashboard";
 import PayCalendar from "./pages/PayCalendar";
+import PayrollDashboard from "./pages/PayrollDashboard";
 import Company from "./pages/Company";
 import Employees from "./pages/Employees";
 import EmployeeProfile from "./pages/EmployeeProfile";
@@ -107,7 +108,8 @@ const App = () => (
             <Route path="/timecard/:employeeId" element={<IndividualTimecardMinimal />} />
             <Route path="/timecard" element={<TimecardRedirect />} />
                 <Route path="/payroll" element={<Payroll />} />
-                <Route path="/pay-calendar" element={<PayCalendar />} />
+          <Route path="/pay-calendar" element={<PayCalendar />} />
+          <Route path="/payroll-dashboard" element={<PayrollDashboard />} />
                 <Route path="/pay-codes-master" element={<PayCodesMasterPage />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/cra-remittances" element={<CRARemittances />} />

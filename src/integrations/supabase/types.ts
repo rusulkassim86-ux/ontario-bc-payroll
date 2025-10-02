@@ -2342,7 +2342,9 @@ export type Database = {
           pay_date: string
           payroll_in_date: string
           payroll_out_date: string
+          period_end: string
           period_end_date: string
+          period_start: string
           report_groups: string | null
           special_effects: string | null
           status: string | null
@@ -2360,7 +2362,9 @@ export type Database = {
           pay_date: string
           payroll_in_date: string
           payroll_out_date: string
+          period_end: string
           period_end_date: string
+          period_start: string
           report_groups?: string | null
           special_effects?: string | null
           status?: string | null
@@ -2378,7 +2382,9 @@ export type Database = {
           pay_date?: string
           payroll_in_date?: string
           payroll_out_date?: string
+          period_end?: string
           period_end_date?: string
+          period_start?: string
           report_groups?: string | null
           special_effects?: string | null
           status?: string | null
@@ -2651,6 +2657,74 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      payroll_cycle_status: {
+        Row: {
+          company_code: string
+          created_at: string
+          error_log: Json | null
+          id: string
+          locked_at: string | null
+          metadata: Json | null
+          pay_cycle_id: string
+          posted_to_gl_at: string | null
+          processed_at: string | null
+          processed_by: string | null
+          processed_employees: number | null
+          status: string
+          total_employees: number | null
+          total_gross: number | null
+          total_hours: number | null
+          total_net: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_code: string
+          created_at?: string
+          error_log?: Json | null
+          id?: string
+          locked_at?: string | null
+          metadata?: Json | null
+          pay_cycle_id: string
+          posted_to_gl_at?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_employees?: number | null
+          status?: string
+          total_employees?: number | null
+          total_gross?: number | null
+          total_hours?: number | null
+          total_net?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_code?: string
+          created_at?: string
+          error_log?: Json | null
+          id?: string
+          locked_at?: string | null
+          metadata?: Json | null
+          pay_cycle_id?: string
+          posted_to_gl_at?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          processed_employees?: number | null
+          status?: string
+          total_employees?: number | null
+          total_gross?: number | null
+          total_hours?: number | null
+          total_net?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_cycle_status_pay_cycle_id_fkey"
+            columns: ["pay_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "pay_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payroll_items: {
         Row: {
@@ -4090,6 +4164,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      complete_payroll_processing: {
+        Args: {
+          p_status_id: string
+          p_total_gross: number
+          p_total_hours: number
+          p_total_net: number
+        }
+        Returns: undefined
+      }
       create_audit_log: {
         Args: {
           p_action: string
@@ -4197,6 +4280,10 @@ export type Database = {
       save_timecard_draft: {
         Args: { p_employee_id: string; p_entries: Json }
         Returns: Json
+      }
+      start_payroll_processing: {
+        Args: { p_company_code: string; p_pay_cycle_id: string }
+        Returns: string
       }
       unlock_timesheet: {
         Args: {
