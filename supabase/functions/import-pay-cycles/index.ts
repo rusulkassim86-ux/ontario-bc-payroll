@@ -8,13 +8,14 @@ const corsHeaders = {
 interface PayCycleRow {
   company_code: string;
   week_number: number;
-  payroll_in_date: string;
-  payroll_out_date: string;
+  in_date: string;
+  out_date: string;
   pay_date: string;
-  period_end_date: string;
-  deduction_groups?: string;
-  special_effects?: string;
-  report_groups?: string;
+  period_start?: string;
+  period_end: string;
+  deduction_groups?: any;
+  special_effects?: any;
+  report_groups?: any;
 }
 
 Deno.serve(async (req) => {
@@ -68,13 +69,14 @@ Deno.serve(async (req) => {
 
       const baseRow: Omit<PayCycleRow, 'company_code'> = {
         week_number: weekNumber,
-        payroll_in_date: row['in_date'],
-        payroll_out_date: row['out_date'],
+        in_date: row['in_date'],
+        out_date: row['out_date'],
         pay_date: row['pay_date'],
-        period_end_date: row['period_end'],
-        deduction_groups: row['deduction_groups'] || null,
-        special_effects: row['special_effects'] || null,
-        report_groups: row['report_groups'] || null,
+        period_start: row['period_start'],
+        period_end: row['period_end'],
+        deduction_groups: row['deduction_groups'] || {},
+        special_effects: row['special_effects'] || {},
+        report_groups: row['report_groups'] || {},
       };
 
       // Expand "ALL" or use specific company
@@ -96,7 +98,7 @@ Deno.serve(async (req) => {
     const { error: upsertError } = await supabase
       .from('pay_cycles')
       .upsert(expandedRows, {
-        onConflict: 'company_code,week_number,period_end_date',
+        onConflict: 'company_code,week_number,period_end',
       });
 
     if (upsertError) throw upsertError;

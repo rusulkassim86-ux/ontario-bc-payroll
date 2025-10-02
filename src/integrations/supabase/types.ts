@@ -2336,12 +2336,16 @@ export type Database = {
           created_at: string
           deduction_groups: string | null
           id: string
+          in_date: string | null
+          is_current: boolean | null
+          out_date: string | null
           pay_date: string
           payroll_in_date: string
           payroll_out_date: string
           period_end_date: string
           report_groups: string | null
           special_effects: string | null
+          status: string | null
           updated_at: string
           week_number: number
         }
@@ -2350,12 +2354,16 @@ export type Database = {
           created_at?: string
           deduction_groups?: string | null
           id?: string
+          in_date?: string | null
+          is_current?: boolean | null
+          out_date?: string | null
           pay_date: string
           payroll_in_date: string
           payroll_out_date: string
           period_end_date: string
           report_groups?: string | null
           special_effects?: string | null
+          status?: string | null
           updated_at?: string
           week_number: number
         }
@@ -2364,12 +2372,16 @@ export type Database = {
           created_at?: string
           deduction_groups?: string | null
           id?: string
+          in_date?: string | null
+          is_current?: boolean | null
+          out_date?: string | null
           pay_date?: string
           payroll_in_date?: string
           payroll_out_date?: string
           period_end_date?: string
           report_groups?: string | null
           special_effects?: string | null
+          status?: string | null
           updated_at?: string
           week_number?: number
         }
@@ -2445,6 +2457,7 @@ export type Database = {
           employee_count: number
           id: string
           pay_calendar_id: string
+          pay_cycle_id: string | null
           processed_at: string | null
           processed_by: string | null
           run_type: string
@@ -2461,6 +2474,7 @@ export type Database = {
           employee_count?: number
           id?: string
           pay_calendar_id: string
+          pay_cycle_id?: string | null
           processed_at?: string | null
           processed_by?: string | null
           run_type?: string
@@ -2477,6 +2491,7 @@ export type Database = {
           employee_count?: number
           id?: string
           pay_calendar_id?: string
+          pay_cycle_id?: string | null
           processed_at?: string | null
           processed_by?: string | null
           run_type?: string
@@ -2500,6 +2515,13 @@ export type Database = {
             columns: ["pay_calendar_id"]
             isOneToOne: false
             referencedRelation: "pay_calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_runs_pay_cycle_id_fkey"
+            columns: ["pay_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "pay_cycles"
             referencedColumns: ["id"]
           },
           {
@@ -3653,6 +3675,7 @@ export type Database = {
           approval_note: string | null
           approved_at: string | null
           approved_by: string | null
+          company_code: string | null
           created_at: string
           daily_hours: number
           department: string | null
@@ -3685,6 +3708,7 @@ export type Database = {
           approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          company_code?: string | null
           created_at?: string
           daily_hours?: number
           department?: string | null
@@ -3717,6 +3741,7 @@ export type Database = {
           approval_note?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          company_code?: string | null
           created_at?: string
           daily_hours?: number
           department?: string | null
@@ -4102,6 +4127,19 @@ export type Database = {
       generate_roe_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_current_pay_cycle: {
+        Args: { p_company_code: string }
+        Returns: {
+          company_code: string
+          id: string
+          in_date: string
+          out_date: string
+          pay_date: string
+          period_end: string
+          period_start: string
+          week_number: number
+        }[]
       }
       get_current_user_company: {
         Args: Record<PropertyKey, never>
