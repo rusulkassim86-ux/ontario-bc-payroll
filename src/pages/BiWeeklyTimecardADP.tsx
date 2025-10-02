@@ -235,7 +235,6 @@ export default function BiWeeklyTimecardADP() {
     return rows;
   }
 
-  // Save draft for a single day entry
   const saveSingleEntry = useCallback(async (workDate: string, hours: number | null, payCode: string | null) => {
     if (!employeeData) return;
 
@@ -245,14 +244,26 @@ export default function BiWeeklyTimecardADP() {
       pay_code: payCode
     };
 
-    const { data, error } = await supabase.rpc('save_timecard_draft', {
-      p_employee_id: employeeData.id,
-      p_entries: [entry]
-    });
+    try {
+      const { data, error } = await supabase.rpc('save_timecard_draft', {
+        p_employee_id: employeeData.id,
+        p_entries: [entry]
+      });
 
-    if (error) throw error;
-    return data as { success: boolean; entries_saved: number; total_hours: number; breakdown: any[] };
-  }, [employeeData]);
+      if (error) throw error;
+      return data as { success: boolean; entries_saved: number; total_hours: number; breakdown: any[] };
+    } catch (error: any) {
+      // Handle pay calendar not found error
+      if (error.message?.includes('No pay calendar found')) {
+        toast({
+          title: "Pay Calendar Missing",
+          description: "No pay calendar was found for this date. Please contact your payroll administrator to create a pay calendar first.",
+          variant: "destructive",
+        });
+      }
+      throw error;
+    }
+  }, [employeeData, toast]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

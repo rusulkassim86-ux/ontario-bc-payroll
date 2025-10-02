@@ -3904,6 +3904,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_pay_calendar_for_date: {
+        Args: { p_employee_id: string; p_work_date: string }
+        Returns: string
+      }
       get_unread_notification_count: {
         Args: Record<PropertyKey, never>
         Returns: number
