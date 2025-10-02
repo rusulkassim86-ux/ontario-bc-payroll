@@ -3342,6 +3342,60 @@ export type Database = {
         }
         Relationships: []
       }
+      timecards: {
+        Row: {
+          company_code: string
+          created_at: string
+          employee_id: string
+          id: number
+          pay_calendar_id: string | null
+          status: string
+          total_hours: number
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          company_code: string
+          created_at?: string
+          employee_id: string
+          id?: number
+          pay_calendar_id?: string | null
+          status?: string
+          total_hours?: number
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          company_code?: string
+          created_at?: string
+          employee_id?: string
+          id?: number
+          pay_calendar_id?: string | null
+          status?: string
+          total_hours?: number
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timecards_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timecards_pay_calendar_id_fkey"
+            columns: ["pay_calendar_id"]
+            isOneToOne: false
+            referencedRelation: "pay_calendars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timesheet_approvals: {
         Row: {
           approval_note: string | null
@@ -3433,6 +3487,56 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheet_entries: {
+        Row: {
+          created_at: string
+          daily_hours: number
+          id: number
+          manual_hours: number | null
+          pay_code: string | null
+          source: string
+          time_in: string | null
+          time_out: string | null
+          timecard_id: number
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          created_at?: string
+          daily_hours?: number
+          id?: number
+          manual_hours?: number | null
+          pay_code?: string | null
+          source?: string
+          time_in?: string | null
+          time_out?: string | null
+          timecard_id: number
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          created_at?: string
+          daily_hours?: number
+          id?: number
+          manual_hours?: number | null
+          pay_code?: string | null
+          source?: string
+          time_in?: string | null
+          time_out?: string | null
+          timecard_id?: number
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheet_entries_timecard_id_fkey"
+            columns: ["timecard_id"]
+            isOneToOne: false
+            referencedRelation: "timecards"
             referencedColumns: ["id"]
           },
         ]
@@ -3904,6 +4008,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_or_create_timecard: {
+        Args: {
+          p_employee_id: string
+          p_week_end: string
+          p_week_start: string
+        }
+        Returns: number
+      }
       get_pay_calendar_for_date: {
         Args: { p_employee_id: string; p_work_date: string }
         Returns: string
@@ -3927,6 +4039,10 @@ export type Database = {
       }
       mark_notification_read: {
         Args: { p_notification_id: string }
+        Returns: undefined
+      }
+      recompute_timecard: {
+        Args: { p_timecard_id: number }
         Returns: undefined
       }
       require_2fa_for_admin_action: {

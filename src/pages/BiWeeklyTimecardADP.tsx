@@ -187,26 +187,53 @@ export default function BiWeeklyTimecardADP() {
   const companyCode = employeeData?.company_code || profile?.company_id;
   const { payCodes, loading: payCodesLoading, source: payCodesSource } = useTimesheetPayCodes(companyCode);
 
-  // Fetch or create timecard (using blank rows only - no DB persistence for now)
+  // Get or create timecard using new edge function
   const { data: timecardData, isLoading, refetch } = useQuery({
-    queryKey: ['timecard-adp', employeeId, periodStart, periodEnd],
+    queryKey: ['timecard-v2', employeeId, periodStart, periodEnd],
     queryFn: async () => {
-      // Generate blank rows immediately (fail-open approach)
-      const blankRows = generateBlankRows(periodStart);
-      return { timecard: blankRows, created: true };
+      if (!employeeData?.id) return null;
+      
+      const session = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const url = `${supabaseUrl}/functions/v1/get-timecard-v2?employeeId=${employeeData.id}&weekStart=${periodStart}&weekEnd=${periodEnd}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${session.data.session?.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch timecard');
+      }
+
+      return await response.json();
     },
     enabled: !!employeeData?.id && !!periodStart,
     staleTime: 30_000,
   });
 
-  // Initialize rows
+  // Initialize rows from server data
   useEffect(() => {
-    if (timecardData?.timecard && Array.isArray(timecardData.timecard)) {
-      setTimecardRows(timecardData.timecard);
-    } else if (!isLoading && timecardRows.length === 0) {
-      setTimecardRows(generateBlankRows(periodStart));
+    if (timecardData?.days && Array.isArray(timecardData.days)) {
+      const rows = timecardData.days.map((day: any) => ({
+        id: day.work_date,
+        work_date: day.work_date,
+        weekday: format(new Date(day.work_date), 'EEEE'),
+        time_in: day.time_in || null,
+        time_out: day.time_out || null,
+        pay_code: day.pay_code || null,
+        hours: day.daily_hours || null,
+        manual_hours: day.manual_hours || null,
+        daily_hours: day.daily_hours || null,
+        source: day.source || 'punch',
+        department: employeeData?.home_department || null,
+        approved: false,
+      }));
+      setTimecardRows(rows);
     }
-  }, [timecardData, isLoading]);
+  }, [timecardData, employeeData]);
 
   // Generate 14 blank rows (Mon-Sun × 2)
   function generateBlankRows(start: string): TimecardRow[] {
@@ -236,25 +263,59 @@ export default function BiWeeklyTimecardADP() {
   }
 
   const saveSingleEntry = useCallback(async (workDate: string, hours: number | null, payCode: string | null) => {
-    if (!employeeData) return;
+    if (!employeeData || !timecardData?.timecard?.id) return;
 
     const entry = {
-      work_date: workDate,
-      hours: hours,
-      pay_code: payCode
+      workDate,
+      hours,
+      payCode
     };
 
     try {
-      const { data, error } = await supabase.rpc('save_timecard_draft', {
-        p_employee_id: employeeData.id,
-        p_entries: [entry]
+      const session = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const url = `${supabaseUrl}/functions/v1/save-timecard-v2`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardId: timecardData.timecard.id,
+          entries: [entry],
+        }),
       });
 
-      if (error) throw error;
-      return data as { success: boolean; entries_saved: number; total_hours: number; breakdown: any[] };
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save');
+      }
+
+      const data = await response.json();
+      
+      // Update local state with server response
+      if (data.days) {
+        const updatedRows = timecardRows.map(row => {
+          const serverDay = data.days.find((d: any) => d.work_date === row.work_date);
+          if (serverDay) {
+            return {
+              ...row,
+              daily_hours: serverDay.daily_hours,
+              manual_hours: serverDay.manual_hours,
+              source: serverDay.source,
+              hours: serverDay.daily_hours,
+            };
+          }
+          return row;
+        });
+        setTimecardRows(updatedRows);
+      }
+
+      return data;
     } catch (error: any) {
-      // Handle pay calendar not found error
-      if (error.message?.includes('No pay calendar found')) {
+      if (error.message?.includes('pay calendar')) {
         toast({
           title: "Pay Calendar Missing",
           description: "No pay calendar was found for this date. Please contact your payroll administrator to create a pay calendar first.",
@@ -263,60 +324,73 @@ export default function BiWeeklyTimecardADP() {
       }
       throw error;
     }
-  }, [employeeData, toast]);
+  }, [employeeData, timecardData, timecardRows, toast]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!employeeData) throw new Error("Employee not found");
+      if (!employeeData || !timecardData?.timecard?.id) throw new Error("Timecard not found");
       
-      // Prepare entries from timecardRows
       const entries = timecardRows
-        .filter(row => row.hours && row.hours > 0) // Only save rows with hours
+        .filter(row => row.hours && row.hours > 0)
         .map(row => ({
-          work_date: row.work_date,
+          workDate: row.work_date,
           hours: row.hours,
-          pay_code: row.pay_code,
-          time_in: row.time_in,
-          time_out: row.time_out
+          payCode: row.pay_code,
+          timeIn: row.time_in,
+          timeOut: row.time_out
         }));
 
       if (entries.length === 0) {
         throw new Error("No hours entered to save");
       }
 
-      const { data, error } = await supabase.rpc('save_timecard_draft', {
-        p_employee_id: employeeData.id,
-        p_entries: entries
+      const session = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const url = `${supabaseUrl}/functions/v1/save-timecard-v2`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timecardId: timecardData.timecard.id,
+          entries,
+        }),
       });
 
-      if (error) throw error;
-      return data as { success: boolean; entries_saved: number; total_hours: number; breakdown: any[] };
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save timecard');
+      }
+
+      return await response.json();
     },
     onSuccess: (data) => {
       setLastSaved(new Date());
-      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
       
-      // Update rows from server response if available
-      if (data?.breakdown && Array.isArray(data.breakdown)) {
-        const updatedRows = timecardRows.map(row => {
-          const serverDay = data.breakdown.find((d: any) => d.work_date === row.work_date);
-          if (serverDay) {
-            return {
-              ...row,
-              daily_hours: serverDay.daily_hours || 0,
-              manual_hours: serverDay.manual_hours,
-              source: serverDay.source || 'manual',
-              hours: serverDay.daily_hours || row.hours
-            };
-          }
-          return row;
-        });
+      if (data?.days) {
+        const updatedRows = data.days.map((day: any) => ({
+          id: day.work_date,
+          work_date: day.work_date,
+          weekday: format(new Date(day.work_date), 'EEEE'),
+          time_in: day.time_in || null,
+          time_out: day.time_out || null,
+          pay_code: day.pay_code || null,
+          hours: day.daily_hours || null,
+          manual_hours: day.manual_hours || null,
+          daily_hours: day.daily_hours || null,
+          source: day.source || 'punch',
+          department: employeeData?.home_department || null,
+          approved: false,
+        }));
         setTimecardRows(updatedRows);
       }
 
       toast({
         title: "Saved",
-        description: `Timecard saved: ${data?.total_hours || 0} total hours`,
+        description: `Timecard saved: ${data?.timecard?.total_hours || 0} total hours`,
       });
     },
     onError: (error: any) => {
