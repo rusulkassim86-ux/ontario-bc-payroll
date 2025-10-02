@@ -518,28 +518,28 @@ export default function BiWeeklyTimecardADP() {
                 disabled={isLocked || saveMutation.isPending}
               >
                 <Save className="mr-2 h-4 w-4" />
-                Save Draft
+                {saveMutation.isPending ? 'Saving...' : 'Save Draft'}
               </Button>
 
               {canSupervise && status === 'pending' && (
                 <Button
                   onClick={() => supervisorApproveMutation.mutate()}
-                  disabled={supervisorApproveMutation.isPending}
+                  disabled={supervisorApproveMutation.isPending || isLocked}
                   variant="secondary"
                 >
                   <Check className="mr-2 h-4 w-4" />
-                  Supervisor Approve
+                  {supervisorApproveMutation.isPending ? 'Approving...' : 'Supervisor Approve'}
                 </Button>
               )}
 
               {isAdmin && status === 'supervisor_approved' && (
                 <Button
                   onClick={() => hrApproveMutation.mutate()}
-                  disabled={hrApproveMutation.isPending}
+                  disabled={hrApproveMutation.isPending || isLocked}
                   variant="default"
                 >
                   <Check className="mr-2 h-4 w-4" />
-                  HR Final Approve
+                  {hrApproveMutation.isPending ? 'Finalizing...' : 'HR Final Approve'}
                 </Button>
               )}
             </div>
