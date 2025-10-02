@@ -3905,6 +3905,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      save_timecard_draft: {
+        Args: { p_employee_id: string; p_entries: Json }
+        Returns: Json
+      }
       unlock_timesheet: {
         Args: {
           p_employee_id: string

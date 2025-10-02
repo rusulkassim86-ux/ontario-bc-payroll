@@ -116,18 +116,40 @@ export default function BiWeeklyTimecardADP() {
     return rows;
   }
 
-  // Save mutation (local only for now)
+  // Save draft mutation - persists hours to database
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Simulate save (local state only)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { success: true };
+      if (!employeeData) throw new Error("Employee not found");
+      
+      // Prepare entries from timecardRows
+      const entries = timecardRows
+        .filter(row => row.hours && row.hours > 0) // Only save rows with hours
+        .map(row => ({
+          work_date: row.work_date,
+          hours: row.hours,
+          pay_code: row.pay_code,
+          time_in: row.time_in,
+          time_out: row.time_out
+        }));
+
+      if (entries.length === 0) {
+        throw new Error("No hours entered to save");
+      }
+
+      const { data, error } = await supabase.rpc('save_timecard_draft', {
+        p_employee_id: employeeData.id,
+        p_entries: entries
+      });
+
+      if (error) throw error;
+      return data as { success: boolean; entries_saved: number; totals: { reg: number; ot: number; stat: number; vac: number; sick: number; total: number } };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setLastSaved(new Date());
+      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
       toast({
         title: "Saved",
-        description: "Timecard saved successfully (local)",
+        description: `Timecard saved: ${data?.totals?.total || 0} total hours`,
       });
     },
     onError: (error: any) => {
@@ -139,19 +161,37 @@ export default function BiWeeklyTimecardADP() {
     },
   });
 
-  // Supervisor approval
+  // Supervisor approval - saves first, then approves
   const supervisorApproveMutation = useMutation({
     mutationFn: async () => {
       if (!employeeData) throw new Error("Employee not found");
       
-      const totals = {
-        reg: timecardRows.filter(r => r.pay_code === 'REG').reduce((sum, r) => sum + (r.hours || 0), 0),
-        ot: timecardRows.filter(r => r.pay_code?.includes('OT') || r.pay_code === 'O/T').reduce((sum, r) => sum + (r.hours || 0), 0),
-        stat: timecardRows.filter(r => r.pay_code === 'STAT').reduce((sum, r) => sum + (r.hours || 0), 0),
-        vac: timecardRows.filter(r => r.pay_code === 'VAC').reduce((sum, r) => sum + (r.hours || 0), 0),
-        sick: timecardRows.filter(r => r.pay_code === 'SICK').reduce((sum, r) => sum + (r.hours || 0), 0)
-      };
+      // Step 1: Save draft first to ensure hours are in DB
+      const entries = timecardRows
+        .filter(row => row.hours && row.hours > 0)
+        .map(row => ({
+          work_date: row.work_date,
+          hours: row.hours,
+          pay_code: row.pay_code,
+          time_in: row.time_in,
+          time_out: row.time_out
+        }));
 
+      if (entries.length === 0) {
+        throw new Error("Cannot approve timecard with zero hours");
+      }
+
+      // Save to database first
+      const { data: saveData, error: saveError } = await supabase.rpc('save_timecard_draft', {
+        p_employee_id: employeeData.id,
+        p_entries: entries
+      });
+
+      if (saveError) throw saveError;
+      
+      const savedTotals = saveData as { success: boolean; entries_saved: number; totals: { reg: number; ot: number; stat: number; vac: number; sick: number; total: number } };
+
+      // Step 2: Approve (function will recalculate totals from DB)
       const week1Start = new Date(periodStart);
       const week2End = new Date(periodEnd);
 
@@ -159,9 +199,9 @@ export default function BiWeeklyTimecardADP() {
         p_employee_id: employeeData.id,
         p_start_date: week1Start.toISOString().split('T')[0],
         p_end_date: week2End.toISOString().split('T')[0],
-        p_selected_days: timecardRows.filter(r => r.hours && r.hours > 0).map(r => r.work_date),
+        p_selected_days: timecardRows.filter(r => r.hours && r.hours > 0).map(r => ({ date: r.work_date })),
         p_approval_note: 'Supervisor approved via ADP timecard',
-        p_totals: totals
+        p_totals: savedTotals.totals // Pass saved totals (will be recalculated server-side)
       });
 
       if (error) throw error;
@@ -185,7 +225,7 @@ export default function BiWeeklyTimecardADP() {
     }
   });
 
-  // HR final approval
+  // HR final approval - function recalculates totals from DB
   const hrApproveMutation = useMutation({
     mutationFn: async () => {
       if (!employeeData) throw new Error("Employee not found");
@@ -193,6 +233,7 @@ export default function BiWeeklyTimecardADP() {
       const week1Start = new Date(periodStart);
       const week2End = new Date(periodEnd);
       
+      // Approval function will recalculate totals from database
       const { data, error } = await supabase.rpc('approve_timesheet_final', {
         p_employee_id: employeeData.id,
         p_start_date: week1Start.toISOString().split('T')[0],
