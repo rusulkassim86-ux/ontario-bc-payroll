@@ -223,18 +223,35 @@ serve(async (req) => {
 
     // Check for overlaps before inserting
     for (const row of insertData) {
-      const { data: existing } = await supabase
-        .from('pay_cycles')
-        .select('id, period_start, period_end')
-        .eq('company_code', row.company_code)
-        .neq('pay_period_number', row.pay_period_number)
-        .or(`and(period_start.lte.${row.period_end},period_end.gte.${row.period_start})`);
+      try {
+        const { data: existing, error: queryError } = await supabase
+          .from('pay_cycles')
+          .select('id, period_start, period_end, pay_period_number')
+          .eq('company_code', row.company_code)
+          .not('pay_period_number', 'eq', row.pay_period_number)
+          .or(`period_start.lte.${row.period_end},period_end.gte.${row.period_start}`);
 
-      if (existing && existing.length > 0) {
+        if (queryError) {
+          console.error('Overlap query error:', queryError);
+          return new Response(
+            JSON.stringify({ error: `Database error checking overlaps: ${queryError.message}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (existing && existing.length > 0) {
+          const conflict = existing[0];
+          return new Response(
+            JSON.stringify({
+              error: `Row with ${row.company_code} period ${row.period_start} to ${row.period_end} overlaps with existing period ${conflict.period_start} to ${conflict.period_end} (Pay Period ${conflict.pay_period_number})`
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } catch (err) {
+        console.error('Overlap check error:', err);
         return new Response(
-          JSON.stringify({
-            error: `Overlapping period detected for ${row.company_code}: period ${row.period_start} to ${row.period_end} conflicts with existing cycle`
-          }),
+          JSON.stringify({ error: `Error checking overlaps: ${err.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -246,38 +263,50 @@ serve(async (req) => {
     let skipped = 0;
 
     for (const row of insertData) {
-      const { error: upsertError, status } = await supabase
-        .from('pay_cycles')
-        .upsert({
-          company_code: row.company_code,
-          pay_period_number: row.pay_period_number,
-          period_start: row.period_start,
-          period_end: row.period_end,
-          pay_date: row.pay_date,
-          status: 'scheduled',
-        }, {
-          onConflict: 'company_code,pay_period_number,period_end',
-        });
-
-      if (upsertError) {
-        console.error('Upsert error:', upsertError);
-        warnings.push(`Failed to insert/update ${row.company_code} period ${row.pay_period_number}: ${upsertError.message}`);
-        skipped++;
-      } else {
-        // Check if it was an insert or update by trying to find existing
-        const { data: existing } = await supabase
+      try {
+        // Check if row exists first
+        const { data: existingRow } = await supabase
           .from('pay_cycles')
           .select('id')
           .eq('company_code', row.company_code)
           .eq('pay_period_number', row.pay_period_number)
           .eq('period_end', row.period_end)
           .maybeSingle();
-        
-        if (existing) {
+
+        const isUpdate = !!existingRow;
+
+        const { error: upsertError } = await supabase
+          .from('pay_cycles')
+          .upsert({
+            company_code: row.company_code,
+            pay_period_number: row.pay_period_number,
+            period_start: row.period_start,
+            period_end: row.period_end,
+            pay_date: row.pay_date,
+            status: 'Scheduled',
+          }, {
+            onConflict: 'company_code,pay_period_number,period_end',
+          });
+
+        if (upsertError) {
+          console.error('Upsert error:', upsertError);
+          return new Response(
+            JSON.stringify({ error: `Failed to save ${row.company_code} Pay Period ${row.pay_period_number}: ${upsertError.message}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (isUpdate) {
           updated++;
         } else {
           inserted++;
         }
+      } catch (err) {
+        console.error('Row processing error:', err);
+        return new Response(
+          JSON.stringify({ error: `Error processing ${row.company_code} Pay Period ${row.pay_period_number}: ${err.message}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
@@ -296,10 +325,16 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error processing import:', error);
+    console.error('Unhandled error processing import:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        success: false,
+        error: `Import failed: ${errorMessage}`,
+        inserted: 0,
+        updated: 0,
+        skipped: 0,
+        warnings: []
       }),
       {
         status: 400,

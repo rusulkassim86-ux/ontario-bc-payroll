@@ -3768,6 +3768,7 @@ export type Database = {
           locked_at: string | null
           manual_hours: number | null
           notes: string | null
+          overtime_hours: number | null
           pay_calendar_id: string
           pay_code: string | null
           pay_code_id: string | null
@@ -3782,6 +3783,8 @@ export type Database = {
           time_in: string | null
           time_out: string | null
           updated_at: string
+          week1_hours: number | null
+          week2_hours: number | null
           work_date: string
         }
         Insert: {
@@ -3804,6 +3807,7 @@ export type Database = {
           locked_at?: string | null
           manual_hours?: number | null
           notes?: string | null
+          overtime_hours?: number | null
           pay_calendar_id: string
           pay_code?: string | null
           pay_code_id?: string | null
@@ -3818,6 +3822,8 @@ export type Database = {
           time_in?: string | null
           time_out?: string | null
           updated_at?: string
+          week1_hours?: number | null
+          week2_hours?: number | null
           work_date: string
         }
         Update: {
@@ -3840,6 +3846,7 @@ export type Database = {
           locked_at?: string | null
           manual_hours?: number | null
           notes?: string | null
+          overtime_hours?: number | null
           pay_calendar_id?: string
           pay_code?: string | null
           pay_code_id?: string | null
@@ -3854,6 +3861,8 @@ export type Database = {
           time_in?: string | null
           time_out?: string | null
           updated_at?: string
+          week1_hours?: number | null
+          week2_hours?: number | null
           work_date?: string
         }
         Relationships: [
