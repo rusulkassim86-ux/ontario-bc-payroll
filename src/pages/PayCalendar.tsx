@@ -55,22 +55,75 @@ export default function PayCalendar() {
 
     setUploading(true);
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      
+      if (fileExt === 'csv') {
+        // Handle CSV
+        const text = await file.text();
+        const lines = text.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(',').map(h => h.trim());
+        const rows = lines.slice(1).map(line => {
+          const values = line.split(',');
+          const row: any = {};
+          headers.forEach((header, i) => {
+            row[header] = values[i]?.trim() || '';
+          });
+          return row;
+        });
 
-      const { data: result, error } = await supabase.functions.invoke('import-pay-cycles', {
-        body: { rows: jsonData }
-      });
+        const { data: result, error } = await supabase.functions.invoke('import-pay-cycles', {
+          body: { rows }
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast.success(`Imported ${result.totalRecords} pay cycles successfully`);
-      refetch();
+        toast.success(
+          `✓ Imported ${result.inserted} pay cycles\n${result.warnings?.length > 0 ? `⚠ ${result.warnings.length} warnings` : ''}`,
+          { duration: 5000 }
+        );
+        
+        if (result.warnings?.length > 0) {
+          console.warn('Import warnings:', result.warnings);
+        }
+
+        refetch();
+      } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+        // Handle Excel
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const sheetName = workbook.SheetNames.includes('PayCycle') 
+          ? 'PayCycle' 
+          : workbook.SheetNames[0];
+        
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        const { data: result, error } = await supabase.functions.invoke('import-pay-cycles', {
+          body: { rows: jsonData }
+        });
+
+        if (error) throw error;
+
+        const summary = [
+          `✓ Inserted: ${result.inserted}`,
+          result.skipped > 0 ? `⊘ Skipped: ${result.skipped}` : '',
+          result.warnings?.length > 0 ? `⚠ Warnings: ${result.warnings.length}` : ''
+        ].filter(Boolean).join('\n');
+
+        toast.success(summary, { duration: 5000 });
+
+        if (result.warnings?.length > 0) {
+          console.warn('Import warnings:', result.warnings);
+          result.warnings.forEach((w: string) => console.warn(w));
+        }
+
+        refetch();
+      } else {
+        throw new Error('Please upload a CSV or Excel (.xlsx, .xls) file');
+      }
     } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload pay cycles');
+      toast.error(error.error || error.message || 'Failed to upload pay cycles');
     } finally {
       setUploading(false);
       e.target.value = '';
