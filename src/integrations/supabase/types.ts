@@ -2340,7 +2340,8 @@ export type Database = {
           is_current: boolean | null
           out_date: string | null
           pay_date: string
-          payroll_in_date: string
+          pay_period_number: number | null
+          payroll_in_date: string | null
           payroll_out_date: string
           period_end: string
           period_end_date: string
@@ -2360,7 +2361,8 @@ export type Database = {
           is_current?: boolean | null
           out_date?: string | null
           pay_date: string
-          payroll_in_date: string
+          pay_period_number?: number | null
+          payroll_in_date?: string | null
           payroll_out_date: string
           period_end: string
           period_end_date: string
@@ -2380,7 +2382,8 @@ export type Database = {
           is_current?: boolean | null
           out_date?: string | null
           pay_date?: string
-          payroll_in_date?: string
+          pay_period_number?: number | null
+          payroll_in_date?: string | null
           payroll_out_date?: string
           period_end?: string
           period_end_date?: string
@@ -3769,7 +3772,10 @@ export type Database = {
           pay_code: string | null
           pay_code_id: string | null
           pay_period_end: string | null
+          pay_period_number: number | null
           pay_period_start: string | null
+          period_end: string | null
+          period_start: string | null
           project_code: string | null
           source: string
           status: string
@@ -3802,7 +3808,10 @@ export type Database = {
           pay_code?: string | null
           pay_code_id?: string | null
           pay_period_end?: string | null
+          pay_period_number?: number | null
           pay_period_start?: string | null
+          period_end?: string | null
+          period_start?: string | null
           project_code?: string | null
           source?: string
           status?: string
@@ -3835,7 +3844,10 @@ export type Database = {
           pay_code?: string | null
           pay_code_id?: string | null
           pay_period_end?: string | null
+          pay_period_number?: number | null
           pay_period_start?: string | null
+          period_end?: string | null
+          period_start?: string | null
           project_code?: string | null
           source?: string
           status?: string
